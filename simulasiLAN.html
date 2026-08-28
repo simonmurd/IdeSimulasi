@@ -10,7 +10,7 @@
         :root {
             --bg-color: #f8fafc;
             --card-bg: #ffffff;
-            --primary: #0ea5e9; /* Neon Blue */
+            --primary: #0ea5e9;
             --primary-glow: rgba(14, 165, 233, 0.4);
             --success: #10b981;
             --danger: #ef4444;
@@ -64,7 +64,6 @@
             color: var(--text-muted);
         }
 
-        /* Controls */
         .controls {
             display: flex;
             justify-content: center;
@@ -126,7 +125,6 @@
             transform: translateY(0);
         }
 
-        /* Wires Palette */
         .palette-container {
             background: #ffffff;
             padding: 20px;
@@ -166,14 +164,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             font-weight: 800;
-            color: rgba(255, 255, 255, 0.9);
+            color: #0f172a;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             user-select: none;
             transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
             position: relative;
             overflow: hidden;
+            text-shadow: 0 0 3px rgba(255,255,255,0.8);
         }
 
         .wire::after {
@@ -181,6 +180,7 @@
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+            pointer-events: none;
         }
 
         .wire:hover {
@@ -198,17 +198,15 @@
             transform: translateY(-5px);
         }
 
-        /* Color Variations (Futuristic adjustments) */
         .w-orange-white { background: linear-gradient(135deg, #fb923c 50%, #f8fafc 50%); color: #431407; }
-        .w-orange       { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .w-orange       { background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; text-shadow: 0 0 3px rgba(0,0,0,0.5); }
         .w-green-white  { background: linear-gradient(135deg, #4ade80 50%, #f8fafc 50%); color: #14532d; }
-        .w-blue         { background: linear-gradient(135deg, #38bdf8, #0284c7); }
+        .w-blue         { background: linear-gradient(135deg, #38bdf8, #0284c7); color: #ffffff; text-shadow: 0 0 3px rgba(0,0,0,0.5); }
         .w-blue-white   { background: linear-gradient(135deg, #38bdf8 50%, #f8fafc 50%); color: #0c4a6e; }
-        .w-green        { background: linear-gradient(135deg, #22c55e, #16a34a); }
+        .w-green        { background: linear-gradient(135deg, #22c55e, #16a34a); color: #ffffff; text-shadow: 0 0 3px rgba(0,0,0,0.5); }
         .w-brown-white  { background: linear-gradient(135deg, #a8a29e 50%, #f8fafc 50%); color: #44403c; }
-        .w-brown        { background: linear-gradient(135deg, #78716c, #57534e); }
+        .w-brown        { background: linear-gradient(135deg, #78716c, #57534e); color: #ffffff; text-shadow: 0 0 3px rgba(0,0,0,0.5); }
 
-        /* RJ-45 Connectors Area */
         .connectors-area {
             display: flex;
             justify-content: center;
@@ -240,7 +238,6 @@
             border-radius: 20px;
         }
 
-        /* Stylized RJ-45 Head */
         .rj45-head {
             background: #f8fafc;
             border: 2px solid var(--border-light);
@@ -252,7 +249,6 @@
             position: relative;
         }
 
-        /* Gold pins visual */
         .rj45-head::before {
             content: '';
             position: absolute;
@@ -310,7 +306,6 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
-        /* Result Feedback */
         .result-box {
             padding: 20px;
             border-radius: 12px;
@@ -346,7 +341,7 @@
         @media (max-width: 900px) {
             .connector-box { width: 100%; }
             .pin-slot { width: 34px; height: 90px; }
-            .wire { width: 34px; height: 75px; }
+            .wire { width: 34px; height: 75px; font-size: 0.65rem; }
             .description { font-size: 0.85rem; }
         }
     </style>
@@ -406,7 +401,7 @@
     const T568A = ['GW', 'G', 'OW', 'B', 'BW', 'O', 'BRW', 'BR'];
 
     let draggedElement = null;
-    let selectedWireForTap = null; // Untuk mode tap/klik di HP
+    let selectedWireForTap = null;
 
     function initSimulation() {
         selectedWireForTap = null;
@@ -415,7 +410,6 @@
         createSlots('headB', 'B');
         updateTitles();
         
-        // Klik di area kosong palet akan membatalkan seleksi
         document.getElementById('wirePalette').addEventListener('click', (e) => {
             if(e.target === document.getElementById('wirePalette') && selectedWireForTap) {
                 clearSelection();
@@ -435,8 +429,8 @@
             titleA.innerText = 'Ujung A (Standar T568A)';
             titleB.innerText = 'Ujung B (Standar T568A)';
         } else if (mode === 'crossover') {
-            titleA.innerText = 'Ujung A (Standar T568A)';
-            titleB.innerText = 'Ujung B (Standar T568B)';
+            titleA.innerText = 'Ujung A (Standar T568A / T568B)';
+            titleB.innerText = 'Ujung B (Standar T568B / T568A)';
         }
     }
 
@@ -452,12 +446,10 @@
             wire.draggable = true;
             wire.dataset.colorId = color.id;
             wire.id = `wire-${idx}`;
+            wire.innerText = color.id; // Menampilkan label visual ID kawat
             
-            // Events for Drag & Drop
             wire.addEventListener('dragstart', handleDragStart);
             wire.addEventListener('dragend', handleDragEnd);
-
-            // Events for Tap/Click (Mobile Support)
             wire.addEventListener('click', handleWireClick);
 
             palette.appendChild(wire);
@@ -482,24 +474,20 @@
             numSpan.innerText = i;
             slot.appendChild(numSpan);
 
-            // Events for Drag & Drop
             slot.addEventListener('dragover', handleDragOverSlot);
             slot.addEventListener('dragleave', handleDragLeaveSlot);
             slot.addEventListener('drop', handleDropSlot);
-
-            // Events for Tap/Click
             slot.addEventListener('click', handleSlotClick);
 
             head.appendChild(slot);
         }
     }
 
-    // --- DRAG & DROP LOGIC ---
     function handleDragStart(e) {
         draggedElement = e.target;
         e.dataTransfer.setData('text/plain', e.target.id);
         setTimeout(() => e.target.style.opacity = '0.5', 0);
-        clearSelection(); // Reset mode tap jika mulai drag
+        clearSelection();
     }
 
     function handleDragEnd(e) {
@@ -533,19 +521,16 @@
         }
     }
 
-    // --- TAP / CLICK LOGIC (MOBILE RESPONSIVE) ---
     function handleWireClick(e) {
         e.stopPropagation();
         const wire = e.currentTarget;
 
-        // Jika kawat ada di dalam slot, kembalikan ke palet saat diklik
         if (wire.parentElement.classList.contains('pin-slot')) {
             document.getElementById('wirePalette').appendChild(wire);
             clearSelection();
             return;
         }
 
-        // Toggle seleksi
         if (selectedWireForTap === wire) {
             clearSelection();
         } else {
@@ -558,13 +543,10 @@
     function handleSlotClick(e) {
         const slot = e.currentTarget;
         
-        // Jika ada kawat yang sedang dipilih, pindahkan ke slot ini
         if (selectedWireForTap) {
             moveWireToSlot(selectedWireForTap, slot);
             clearSelection();
-        } 
-        // Jika slot sudah ada kawatnya dan tidak ada yang diseleksi, keluarkan kawat tersebut
-        else if (slot.children.length > 1) {
+        } else if (slot.children.length > 1) {
             const existingWire = slot.querySelector('.wire');
             document.getElementById('wirePalette').appendChild(existingWire);
         }
@@ -580,7 +562,6 @@
     function moveWireToSlot(wireElement, slotElement) {
         if (!wireElement) return;
 
-        // Jika slot sudah terisi, kembalikan kawat lama ke palet
         if (slotElement.children.length > 1) {
             const existingWire = slotElement.querySelector('.wire');
             document.getElementById('wirePalette').appendChild(existingWire);
@@ -588,14 +569,13 @@
         slotElement.appendChild(wireElement);
     }
 
-    // --- PENGUJIAN ---
     function checkCrimping() {
         const mode = document.getElementById('cableMode').value;
         const resultBox = document.getElementById('resultBox');
 
         let targetA = mode === 'straight-a' ? T568A : T568B;
-        let targetB = mode === 'straight-a' ? T568A : (mode === 'straight-b' ? T568B : T568B);
-        if (mode === 'crossover') targetA = T568A; // Ujung A crossover adalah T568A, B adalah T568B
+        let targetB = mode === 'straight-a' ? T568A : T568B;
+        if (mode === 'crossover') targetA = T568A;
 
         const currentA = getSlotColors('A');
         const currentB = getSlotColors('B');
@@ -606,8 +586,17 @@
             return;
         }
 
-        const isCorrectA = JSON.stringify(currentA) === JSON.stringify(targetA);
-        const isCorrectB = JSON.stringify(currentB) === JSON.stringify(targetB);
+        let isCorrectA = JSON.stringify(currentA) === JSON.stringify(targetA);
+        let isCorrectB = JSON.stringify(currentB) === JSON.stringify(targetB);
+
+        // Pengujian Crossover Fleksibel (A = T568B & B = T568A)
+        if (mode === 'crossover' && (!isCorrectA || !isCorrectB)) {
+            if (JSON.stringify(currentA) === JSON.stringify(T568B) && 
+                JSON.stringify(currentB) === JSON.stringify(T568A)) {
+                isCorrectA = true;
+                isCorrectB = true;
+            }
+        }
 
         if (isCorrectA && isCorrectB) {
             resultBox.className = 'result-box success';
