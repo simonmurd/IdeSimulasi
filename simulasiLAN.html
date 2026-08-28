@@ -60,16 +60,17 @@
         .description {
             font-size: 0.95rem;
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             color: var(--text-muted);
         }
 
+        /* Controls */
         .controls {
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 15px;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             flex-wrap: wrap;
             background: #f1f5f9;
             padding: 15px;
@@ -125,6 +126,46 @@
             transform: translateY(0);
         }
 
+        /* Dynamic Legend Guide */
+        .color-legend {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            font-size: 0.8rem;
+            background: #fafafa;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #edf2f7;
+            align-items: center;
+        }
+
+        .legend-header {
+            width: 100%;
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: var(--primary);
+            font-size: 0.85rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-muted);
+        }
+
+        .legend-badge {
+            font-weight: 800;
+            background: #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #0f172a;
+        }
+
+        /* Wires Palette */
         .palette-container {
             background: #ffffff;
             padding: 20px;
@@ -157,7 +198,7 @@
         }
 
         .wire {
-            width: 40px;
+            width: 42px;
             height: 85px;
             border-radius: 8px;
             cursor: grab;
@@ -166,13 +207,11 @@
             justify-content: center;
             font-size: 0.75rem;
             font-weight: 800;
-            color: #0f172a;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             user-select: none;
             transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
             position: relative;
             overflow: hidden;
-            text-shadow: 0 0 3px rgba(255,255,255,0.8);
         }
 
         .wire::after {
@@ -198,15 +237,17 @@
             transform: translateY(-5px);
         }
 
+        /* Color Variations */
         .w-orange-white { background: linear-gradient(135deg, #fb923c 50%, #f8fafc 50%); color: #431407; }
-        .w-orange       { background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; text-shadow: 0 0 3px rgba(0,0,0,0.5); }
+        .w-orange       { background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; text-shadow: 0 0 3px rgba(0,0,0,0.6); }
         .w-green-white  { background: linear-gradient(135deg, #4ade80 50%, #f8fafc 50%); color: #14532d; }
-        .w-blue         { background: linear-gradient(135deg, #38bdf8, #0284c7); color: #ffffff; text-shadow: 0 0 3px rgba(0,0,0,0.5); }
+        .w-blue         { background: linear-gradient(135deg, #38bdf8, #0284c7); color: #ffffff; text-shadow: 0 0 3px rgba(0,0,0,0.6); }
         .w-blue-white   { background: linear-gradient(135deg, #38bdf8 50%, #f8fafc 50%); color: #0c4a6e; }
-        .w-green        { background: linear-gradient(135deg, #22c55e, #16a34a); color: #ffffff; text-shadow: 0 0 3px rgba(0,0,0,0.5); }
+        .w-green        { background: linear-gradient(135deg, #22c55e, #16a34a); color: #ffffff; text-shadow: 0 0 3px rgba(0,0,0,0.6); }
         .w-brown-white  { background: linear-gradient(135deg, #a8a29e 50%, #f8fafc 50%); color: #44403c; }
-        .w-brown        { background: linear-gradient(135deg, #78716c, #57534e); color: #ffffff; text-shadow: 0 0 3px rgba(0,0,0,0.5); }
+        .w-brown        { background: linear-gradient(135deg, #78716c, #57534e); color: #ffffff; text-shadow: 0 0 3px rgba(0,0,0,0.6); }
 
+        /* RJ-45 Connectors Area */
         .connectors-area {
             display: flex;
             justify-content: center;
@@ -236,8 +277,10 @@
             background: #f1f5f9;
             padding: 6px 16px;
             border-radius: 20px;
+            border: 1px solid var(--border-light);
         }
 
+        /* Stylized RJ-45 Head */
         .rj45-head {
             background: #f8fafc;
             border: 2px solid var(--border-light);
@@ -314,6 +357,7 @@
             display: none;
             animation: slideUp 0.4s ease;
             width: 100%;
+            margin-top: 15px;
         }
 
         @keyframes slideUp {
@@ -326,7 +370,6 @@
             color: #065f46;
             border: 1px solid #34d399;
             box-shadow: 0 4px 15px rgba(16, 185, 129, 0.1);
-            display: block;
         }
 
         .result-box.error {
@@ -334,7 +377,6 @@
             color: #991b1b;
             border: 1px solid #f87171;
             box-shadow: 0 4px 15px rgba(239, 68, 68, 0.1);
-            display: block;
             white-space: pre-line;
         }
 
@@ -350,7 +392,7 @@
 
 <div class="container">
     <h1>Simulasi Crimping RJ-45</h1>
-    <p class="description">Tarik kawat warna (Drag & Drop) atau <strong>Ketuk Kawat lalu Ketuk Slot</strong> untuk memasukkannya ke pin RJ-45.</p>
+    <p class="description">Tarik kawat warna (Drag & Drop) atau <strong>Ketuk Kawat lalu Ketuk Slot Pin</strong> untuk memasukkannya ke konektor RJ-45.</p>
 
     <div class="controls">
         <div>
@@ -365,6 +407,9 @@
         <button class="reset-btn" onclick="resetSimulation()">Reset</button>
     </div>
 
+    <!-- Container Petunjuk Warna Dinamis -->
+    <div class="color-legend" id="colorLegend"></div>
+
     <div class="palette-container">
         <div class="palette-title">Kotak Kawat (Tersedia)</div>
         <div class="wires-palette" id="wirePalette"></div>
@@ -372,12 +417,12 @@
 
     <div class="connectors-area">
         <div class="connector-box">
-            <div class="connector-title" id="titleEndA">Ujung A</div>
+            <div class="connector-title" id="titleEndA">Konektor 1 - Ujung A</div>
             <div class="rj45-head" id="headA"></div>
         </div>
 
         <div class="connector-box">
-            <div class="connector-title" id="titleEndB">Ujung B</div>
+            <div class="connector-title" id="titleEndB">Konektor 2 - Ujung B</div>
             <div class="rj45-head" id="headB"></div>
         </div>
     </div>
@@ -387,14 +432,14 @@
 
 <script>
     const colorTypes = [
-        { id: 'OW', name: 'P.Oranye', class: 'w-orange-white' },
-        { id: 'O',  name: 'Oranye',   class: 'w-orange' },
-        { id: 'GW', name: 'P.Hijau',  class: 'w-green-white' },
-        { id: 'B',  name: 'Biru',     class: 'w-blue' },
-        { id: 'BW', name: 'P.Biru',   class: 'w-blue-white' },
-        { id: 'G',  name: 'Hijau',    class: 'w-green' },
-        { id: 'BRW',name: 'P.Coklat', class: 'w-brown-white' },
-        { id: 'BR', name: 'Coklat',   class: 'w-brown' }
+        { id: 'OW', name: 'Putih-Oranye', class: 'w-orange-white' },
+        { id: 'O',  name: 'Oranye',       class: 'w-orange' },
+        { id: 'GW', name: 'Putih-Hijau',  class: 'w-green-white' },
+        { id: 'B',  name: 'Biru',         class: 'w-blue' },
+        { id: 'BW', name: 'Putih-Biru',   class: 'w-blue-white' },
+        { id: 'G',  name: 'Hijau',        class: 'w-green' },
+        { id: 'BRW',name: 'Putih-Cokelat',class: 'w-brown-white' },
+        { id: 'BR', name: 'Cokelat',      class: 'w-brown' }
     ];
 
     const T568B = ['OW', 'O', 'GW', 'B', 'BW', 'G', 'BRW', 'BR'];
@@ -409,6 +454,7 @@
         createSlots('headA', 'A');
         createSlots('headB', 'B');
         updateTitles();
+        updateLegend();
         
         document.getElementById('wirePalette').addEventListener('click', (e) => {
             if(e.target === document.getElementById('wirePalette') && selectedWireForTap) {
@@ -423,15 +469,46 @@
         const titleB = document.getElementById('titleEndB');
 
         if (mode === 'straight-b') {
-            titleA.innerText = 'Ujung A (Standar T568B)';
-            titleB.innerText = 'Ujung B (Standar T568B)';
+            titleA.innerText = 'Konektor 1 - Ujung A (T568B)';
+            titleB.innerText = 'Konektor 2 - Ujung B (T568B)';
         } else if (mode === 'straight-a') {
-            titleA.innerText = 'Ujung A (Standar T568A)';
-            titleB.innerText = 'Ujung B (Standar T568A)';
+            titleA.innerText = 'Konektor 1 - Ujung A (T568A)';
+            titleB.innerText = 'Konektor 2 - Ujung B (T568A)';
         } else if (mode === 'crossover') {
-            titleA.innerText = 'Ujung A (Standar T568A / T568B)';
-            titleB.innerText = 'Ujung B (Standar T568B / T568A)';
+            titleA.innerText = 'Konektor 1 - Ujung A (T568A / T568B)';
+            titleB.innerText = 'Konektor 2 - Ujung B (T568B / T568A)';
         }
+    }
+
+    function updateLegend() {
+        const mode = document.getElementById('cableMode').value;
+        const legendContainer = document.getElementById('colorLegend');
+        
+        let targetSeq = [];
+        let titleText = '';
+
+        if (mode === 'straight-a') {
+            targetSeq = T568A;
+            titleText = 'Panduan Urutan Pin (Standar T568A):';
+        } else if (mode === 'straight-b') {
+            targetSeq = T568B;
+            titleText = 'Panduan Urutan Pin (Standar T568B):';
+        } else if (mode === 'crossover') {
+            targetSeq = T568A;
+            titleText = 'Panduan Urutan Pin Crossover (Konektor 1 = T568A, Konektor 2 = T568B):';
+        }
+
+        let html = `<div class="legend-header">${titleText}</div>`;
+        targetSeq.forEach((colorId, idx) => {
+            const colorObj = colorTypes.find(c => c.id === colorId);
+            html += `
+                <div class="legend-item">
+                    <span class="legend-badge">${idx + 1}. ${colorObj.id}</span> ${colorObj.name}
+                </div>
+            `;
+        });
+
+        legendContainer.innerHTML = html;
     }
 
     function createPalette() {
@@ -446,7 +523,8 @@
             wire.draggable = true;
             wire.dataset.colorId = color.id;
             wire.id = `wire-${idx}`;
-            wire.innerText = color.id; // Menampilkan label visual ID kawat
+            wire.innerText = color.id; 
+            wire.title = `${color.name} (${color.id})`;
             
             wire.addEventListener('dragstart', handleDragStart);
             wire.addEventListener('dragend', handleDragEnd);
@@ -580,16 +658,18 @@
         const currentA = getSlotColors('A');
         const currentB = getSlotColors('B');
 
+        // Memastikan elemen hasil ditampilkan kembali
+        resultBox.style.display = 'block';
+
         if (currentA.includes(null) || currentB.includes(null)) {
             resultBox.className = 'result-box error';
-            resultBox.innerText = '❌ Gagal: Semua 16 slot pin (Ujung A & B) harus terisi kawat!';
+            resultBox.innerText = '❌ Gagal: Semua 16 slot pin (Konektor 1 & Konektor 2) harus terisi kawat!';
             return;
         }
 
         let isCorrectA = JSON.stringify(currentA) === JSON.stringify(targetA);
         let isCorrectB = JSON.stringify(currentB) === JSON.stringify(targetB);
 
-        // Pengujian Crossover Fleksibel (A = T568B & B = T568A)
         if (mode === 'crossover' && (!isCorrectA || !isCorrectB)) {
             if (JSON.stringify(currentA) === JSON.stringify(T568B) && 
                 JSON.stringify(currentB) === JSON.stringify(T568A)) {
@@ -604,8 +684,8 @@
         } else {
             resultBox.className = 'result-box error';
             let msg = '❌ <strong>Gagal! Urutan warna salah.</strong>\n';
-            if (!isCorrectA) msg += '- Ujung A tidak sesuai standar yang dipilih.\n';
-            if (!isCorrectB) msg += '- Ujung B tidak sesuai standar yang dipilih.\n';
+            if (!isCorrectA) msg += '- Konektor 1 (Ujung A) tidak sesuai standar yang dipilih.\n';
+            if (!isCorrectB) msg += '- Konektor 2 (Ujung B) tidak sesuai standar yang dipilih.\n';
             resultBox.innerHTML = msg.replace(/\n/g, '<br>');
         }
     }
