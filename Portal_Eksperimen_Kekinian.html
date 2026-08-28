@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Experiments Portal</title>
+    
+    <!-- Google Fonts: Inter untuk teks utama (bersih/modern), Great Vibes untuk tanda tangan -->
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #fafafa;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --accent-purple: #9b6dff;
+            --accent-light: #eaddff;
+            --card-bg: #ffffff;
+            --card-border: #f0f0f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 20px;
+            line-height: 1.6;
+        }
+
+        /* Header & Intro Section */
+        .hero-section {
+            text-align: center;
+            max-width: 800px;
+            margin-bottom: 60px;
+        }
+
+        .badge {
+            display: inline-block;
+            background-color: var(--accent-light);
+            color: var(--accent-purple);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 24px;
+            color: var(--text-main);
+        }
+
+        /* Aksen titik ungu pada judul */
+        h1 span {
+            color: var(--accent-purple);
+        }
+
+        .intro-text {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            font-weight: 300;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Grid Container */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            width: 100%;
+            max-width: 1200px;
+            margin-bottom: 80px;
+        }
+
+        /* Modern Card Design */
+        .sim-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 32px 24px;
+            text-align: left; /* Teks rata kiri lebih modern */
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            color: var(--text-main);
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 160px;
+        }
+
+        .sim-card::after {
+            content: '→';
+            position: absolute;
+            bottom: 32px;
+            right: 24px;
+            font-size: 1.2rem;
+            color: var(--accent-purple);
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .sim-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--accent-light);
+            box-shadow: 0 12px 30px rgba(155, 109, 255, 0.1);
+        }
+
+        .sim-card:hover::after {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .sim-number {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .sim-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            line-height: 1.3;
+            padding-right: 20px; /* Space for the arrow */
+        }
+
+        /* Footer */
+        footer {
+            margin-top: auto;
+            text-align: center;
+            padding-top: 40px;
+            border-top: 1px solid var(--card-border);
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .signature {
+            font-family: 'Great Vibes', cursive;
+            font-size: 3rem;
+            color: var(--text-main);
+            margin-top: 10px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .grid-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            h1 {
+                font-size: 2.5rem;
+            }
+            .hero-section {
+                margin-bottom: 40px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="hero-section">
+        <div class="badge">Virtual Laboratory</div>
+        <h1>Portal Eksperimen<span>.</span></h1>
+        <p class="intro-text">
+            Eksperimen virtual membuka batas ruang kelas. Bagi siswa, ini adalah arena aman untuk memvisualisasikan teori kompleks dan melatih nalar kritis tanpa takut gagal. Bagi guru, ini merupakan instrumen dinamis untuk mendemonstrasikan konsep abstrak secara interaktif, menjadikan proses belajar lebih mendalam, terukur, dan menyenangkan.
+        </p>
+    </div>
+
+    <main class="grid-container">
+        <!-- 16 Simulation Cards -->
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">01</div>
+                <div class="sim-title">Hukum Newton & Gerak</div>
+            </div>
+        </a>
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">02</div>
+                <div class="sim-title">Sirkuit Listrik Dinamis</div>
+            </div>
+        </a>
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">03</div>
+                <div class="sim-title">Reaksi Asam Basa</div>
+            </div>
+        </a>
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">04</div>
+                <div class="sim-title">Optik & Pembiasan Cahaya</div>
+            </div>
+        </a>
+        
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">05</div>
+                <div class="sim-title">Sistem Tata Surya</div>
+            </div>
+        </a>
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">06</div>
+                <div class="sim-title">Struktur Sel Biologi</div>
+            </div>
+        </a>
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">07</div>
+                <div class="sim-title">Gelombang Elektromagnetik</div>
+            </div>
+        </a>
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">08</div>
+                <div class="sim-title">Termodinamika Gas</div>
+            </div>
+        </a>
+
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">09</div>
+                <div class="sim-title">Simulasi Genetika</div>
+            </div>
+        </a>
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">10</div>
+                <div class="sim-title">Ikatan Kimia Molekuler</div>
+            </div>
+        </a>
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">11</div>
+                <div class="sim-title">Bandul Matematis</div>
+            </div>
+        </a>
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">12</div>
+                <div class="sim-title">Fotosintesis Interaktif</div>
+            </div>
+        </a>
+
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">13</div>
+                <div class="sim-title">Efek Doppler Audio</div>
+            </div>
+        </a>
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">14</div>
+                <div class="sim-title">Gaya Gesek & Gravitasi</div>
+            </div>
+        </a>
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">15</div>
+                <div class="sim-title">Titrasi Larutan</div>
+            </div>
+        </a>
+        <a href="#" class="sim-card">
+            <div>
+                <div class="sim-number">16</div>
+                <div class="sim-title">Anatomi Jantung</div>
+            </div>
+        </a>
+    </main>
+
+    <footer>
+        <p style="font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px;">Created By</p>
+        <p class="signature">Simon Murdani Yusuf</p>
+    </footer>
+
+</body>
+</html>
