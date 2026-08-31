@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Praktikum Jaringan Hybrid - Mobile Friendly</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --cisco-blue: #005073;
+            --cisco-light-blue: #0284c7;
+            --cisco-accent: #06b6d4;
+            --bg-light: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: #e2e8f0; color: var(--text-dark); font-family: 'Inter', sans-serif; padding: 16px; }
+        
+        .container { 
+            max-width: 1320px; 
+            margin: 0 auto; 
+            background-color: var(--card-bg); 
+            border-radius: 12px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
+            overflow: hidden; 
+        }
+        
+        /* Header Responsif */
+        header { 
+            background: linear-gradient(135deg, var(--cisco-blue) 0%, #00334e 100%); 
+            color: #fff; 
+            padding: 20px 24px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 4px solid var(--cisco-accent);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .header-title { display: flex; align-items: center; gap: 14px; }
+        .header-title i { font-size: 24px; color: var(--cisco-accent); background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; }
+        .header-title h1 { font-size: 18px; font-weight: 700; }
+        .header-title p { font-size: 11px; color: #94a3b8; }
+
+        .score-box { 
+            background: rgba(255,255,255,0.1); 
+            padding: 8px 16px; 
+            border-radius: 8px; 
+            border: 1px solid rgba(255,255,255,0.2); 
+            text-align: right; 
+        }
+        .score-title { font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px; }
+        .score-value { font-size: 20px; font-weight: 700; color: var(--cisco-accent); font-family: 'JetBrains Mono', monospace; }
+
+        /* Topology Area Responsif (Scroll Horizontal untuk Mobile) */
+        .topology-section { padding: 20px 24px; background-color: #ffffff; border-bottom: 1px solid var(--border-color); }
+        .section-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 12px; 
+            font-weight: 700; 
+            color: var(--cisco-blue);
+            font-size: 13px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .topology-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        .topology-canvas { 
+            position: relative; 
+            height: 480px; 
+            min-width: 850px; /* Menjaga tata letak node di HP agar tidak bertumpukan */
+            background-color: #fafafa; 
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px); 
+            background-size: 24px 24px; 
+            overflow: hidden; 
+        }
+        .connections-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        
+        .wired-line { stroke: #cbd5e1; stroke-width: 2; stroke-dasharray: 4 4; transition: all 0.3s; }
+        .wired-line.active { stroke: #94a3b8; stroke-width: 3; stroke-dasharray: none; }
+        .wired-line.disabled { stroke: #ef4444; stroke-dasharray: 4 4; opacity: 0.5; }
+        .wireless-line { stroke: #cbd5e1; stroke-width: 2; stroke-dasharray: 4 4; transition: all 0.5s ease; }
+        .wireless-line.connected { stroke: var(--cisco-accent); stroke-width: 2.5; stroke-dasharray: 8 4; animation: dashPulse 1.5s linear infinite; }
+        @keyframes dashPulse { to { stroke-dashoffset: -24; } }
+
+        .device-node { position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: center; cursor: pointer; user-select: none; transition: transform 0.2s; }
+        .device-node:active { transform: scale(0.95); }
+        .device-icon-box { width: 52px; height: 52px; background-color: #fff; border: 2px solid var(--border-color); border-radius: 10px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.05); position: relative; }
+        .device-icon-box i { font-size: 20px; color: var(--text-muted); }
+        .device-node.configured .device-icon-box i { color: var(--cisco-blue); }
+        
+        .core-node .device-icon-box { width: 62px; height: 62px; background: #f8fafc; }
+        .core-node.configured .device-icon-box { border-color: var(--cisco-blue); background: #f1f5f9; }
+        .core-node.configured .device-icon-box i { font-size: 24px; color: var(--cisco-blue); }
+
+        .device-label { margin-top: 4px; font-size: 10px; font-weight: 600; background: rgba(255,255,255,0.95); padding: 2px 6px; border: 1px solid #e2e8f0; border-radius: 4px; text-align: center; line-height: 1.2; }
+        .device-ip { font-size: 9px; color: var(--text-muted); font-weight: 500; }
+        .device-node.configured .device-ip { color: var(--cisco-light-blue); }
+        
+        .status-badge { position: absolute; top: -5px; right: -5px; width: 16px; height: 16px; border-radius: 50%; background-color: var(--danger-color); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #fff; font-weight: bold; }
+        .status-badge.online { background-color: var(--success-color); }
+
+        /* Posisi Node */
+        #router-node { top: 4%; left: 50%; transform: translateX(-50%); }
+        #switch-node { top: 28%; left: 50%; transform: translateX(-50%); }
+        #ap-node { top: 28%; left: 82%; transform: translateX(-50%); }
+        #printer-node { top: 80%; left: 50%; transform: translateX(-50%); }
+        
+        #pc1-node { top: 52%; left: 4%; }
+        #pc2-node { top: 52%; left: 14%; }
+        #pc3-node { top: 52%; left: 24%; }
+        #pc4-node { top: 52%; left: 34%; }
+        #pc5-node { top: 76%; left: 19%; }
+
+        #lap1-node { top: 52%; left: 66%; }
+        #lap2-node { top: 52%; left: 76%; }
+        #lap3-node { top: 52%; left: 86%; }
+        #lap4-node { top: 76%; left: 71%; }
+        #lap5-node { top: 76%; left: 81%; }
+
+        /* Content Layout */
+        .lkpd-body { padding: 24px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; }
+        .card { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; }
+        .card-title { font-size: 14px; font-weight: 700; color: var(--cisco-blue); margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Checklist Styling */
+        .checklist-group { display: flex; flex-direction: column; gap: 8px; }
+        .checklist-item { display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border: 1px solid var(--border-color); padding: 10px 12px; border-radius: 8px; transition: all 0.2s; gap: 8px; }
+        .checklist-item.completed { background: #f0fdf4; border-color: #bbf7d0; }
+        .item-info { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 500; }
+        .item-info i { font-size: 15px; color: var(--text-muted); flex-shrink: 0; }
+        .checklist-item.completed .item-info i { color: var(--success-color); }
+        .item-points { font-size: 10px; font-weight: 700; background: #e2e8f0; color: var(--text-dark); padding: 3px 6px; border-radius: 10px; white-space: nowrap; }
+        .checklist-item.completed .item-points { background: #dcfce7; color: #15803d; }
+
+        /* Terminal & Controls */
+        .terminal-box { background: #0f172a; color: #38bdf8; font-family: 'JetBrains Mono', monospace; font-size: 11px; border-radius: 8px; padding: 12px; height: 220px; overflow-y: auto; line-height: 1.5; }
+        .terminal-success { color: #4ade80; } .terminal-fail { color: #f87171; } .terminal-warn { color: #fbbf24; }
+        .ping-controls { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-top: 12px; }
+        .ping-controls select, .ping-controls button { padding: 10px 8px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .btn-cisco { background: var(--cisco-blue); color: #fff; border: none; cursor: pointer; font-weight: 600; padding: 8px 14px; border-radius: 6px; transition: background 0.2s; }
+        .btn-cisco:hover { background: #00334e; }
+
+        /* Modal Settings (Mobile Friendly) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,23,42,0.6); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.2s; z-index: 100; padding: 12px; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .cisco-modal { background: #fff; width: 100%; max-width: 440px; border-radius: 10px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
+        .modal-header { background: var(--cisco-blue); color: #fff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .modal-body { padding: 16px; max-height: 70vh; overflow-y: auto; }
+        .form-grid { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+        .form-grid label { font-size: 11px; font-weight: 600; color: var(--text-dark); }
+        .form-grid input, .form-grid select { padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; font-family: inherit; }
+        .modal-footer { padding: 10px 16px; background: #f8fafc; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border-color); }
+        
+        .badge-info { font-size: 10px; background: #e0f2fe; color: #0369a1; padding: 8px 10px; border-radius: 6px; margin-bottom: 10px; line-height: 1.4; }
+
+        /* MEDIA QUERIES UNTUK SMARTPHONE & TABLET */
+        @media (max-width: 768px) {
+            body { padding: 8px; }
+            header { flex-direction: column; align-items: stretch; text-align: center; }
+            .header-title { flex-direction: column; text-align: center; }
+            .score-box { text-align: center; }
+            
+            .topology-section { padding: 12px; }
+            .lkpd-body { grid-template-columns: 1fr; padding: 12px; gap: 16px; }
+            
+            .ping-controls { grid-template-columns: 1fr; }
+            .btn-cisco { width: 100%; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-title">
+            <i class="fa-solid fa-list-check"></i>
+            <div>
+                <h1>Praktikum Jaringan Hybrid (LKPD Auto-Grader)</h1>
+                <p>Segment Target: 192.168.88.0/24 | Gateway: 192.168.88.1 | SSID: WiFi_Kantor</p>
+            </div>
+        </div>
+        <div class="score-box">
+            <div class="score-title">Nilai Praktikum</div>
+            <div class="score-value" id="total-score">0 / 100</div>
+        </div>
+    </header>
+
+    <div class="topology-section">
+        <div class="section-header">
+            <span><i class="fa-solid fa-hand-pointer"></i> Peta Topologi (Geser jika terpotong & klik perangkat)</span>
+            <button class="btn-cisco" style="font-size: 11px; padding: 4px 10px; background: #64748b;" onclick="resetAllConfigs()"><i class="fa-solid fa-rotate-right"></i> Reset</button>
+        </div>
+        
+        <!-- Wrapper Scroll Horizontal untuk Layar Seluler -->
+        <div class="topology-wrapper">
+            <div class="topology-canvas" id="canvas-area">
+                <svg class="connections-svg" id="svg-connections"></svg>
+
+                <!-- Router Mikrotik -->
+                <div class="device-node core-node" id="router-node" onclick="openModal('router-modal')">
+                    <div class="device-icon-box"><i class="fa-solid fa-server"></i><div class="status-badge" id="router-badge">!</div></div>
+                    <div class="device-label">Router MikroTik<br><span class="device-ip" id="lbl-router-ip">Unconfigured</span></div>
+                </div>
+
+                <!-- Switch TP-Link -->
+                <div class="device-node core-node" id="switch-node" onclick="openModal('switch-modal')">
+                    <div class="device-icon-box"><i class="fa-solid fa-network-wired"></i><div class="status-badge" id="switch-badge">!</div></div>
+                    <div class="device-label">Switch TP-Link<br><span class="device-ip" id="lbl-switch-status">Port: Disable</span></div>
+                </div>
+
+                <!-- Access Point TP-Link -->
+                <div class="device-node core-node" id="ap-node" onclick="openModal('ap-modal')">
+                    <div class="device-icon-box"><i class="fa-solid fa-wifi"></i><div class="status-badge" id="ap-badge">!</div></div>
+                    <div class="device-label">Access Point<br><span class="device-ip" id="lbl-ap-ip">Unconfigured</span></div>
+                </div>
+
+                <!-- Printer Network -->
+                <div class="device-node" id="printer-node" onclick="openModal('printer-modal')">
+                    <div class="device-icon-box"><i class="fa-solid fa-print"></i><div class="status-badge" id="printer-badge">!</div></div>
+                    <div class="device-label">Printer Network<br><span class="device-ip" id="lbl-printer-ip">Unconfigured</span></div>
+                </div>
+
+                <!-- PC Kabel (1-5) -->
+                <script>
+                    for(let i=1; i<=5; i++) {
+                        document.write(`
+                        <div class="device-node" id="pc${i}-node" onclick="openPCModal('pc${i}')">
+                            <div class="device-icon-box"><i class="fa-solid fa-desktop"></i><div class="status-badge" id="pc${i}-badge">!</div></div>
+                            <div class="device-label">PC-${i}<br><span class="device-ip" id="lbl-pc${i}-ip">Unconfigured</span></div>
+                        </div>`);
+                    }
+                    // Laptop WiFi (1-5)
+                    for(let i=1; i<=5; i++) {
+                        document.write(`
+                        <div class="device-node" id="lap${i}-node" onclick="openLaptopModal('lap${i}')">
+                            <div class="device-icon-box"><i class="fa-solid fa-laptop"></i><div class="status-badge" id="lap${i}-badge">!</div></div>
+                            <div class="device-label">Laptop-${i}<br><span class="device-ip" id="lbl-lap${i}-ip">Disconnected</span></div>
+                        </div>`);
+                    }
+                </script>
+            </div>
+        </div>
+    </div>
+
+    <div class="lkpd-body">
+        <!-- LKPD Checklist Task Card -->
+        <div class="card">
+            <div class="card-title">
+                <span><i class="fa-solid fa-list-check"></i> Petunjuk Uji Konfigurasi</span>
+            </div>
+            <div class="checklist-group">
+                <div class="checklist-item" id="chk-router">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-router"></i>
+                        <span>1. Gateway Router (192.168.88.1 / 255.255.255.0)</span>
+                    </div>
+                    <span class="item-points">10 Poin</span>
+                </div>
+
+                <div class="checklist-item" id="chk-switch">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-switch"></i>
+                        <span>2. Aktifkan Switch Port (Status: Enable)</span>
+                    </div>
+                    <span class="item-points">10 Poin</span>
+                </div>
+
+                <div class="checklist-item" id="chk-ap">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-ap"></i>
+                        <span>3. Setting AP (192.168.88.2, SSID: WiFi_Kantor)</span>
+                    </div>
+                    <span class="item-points">10 Poin</span>
+                </div>
+
+                <div class="checklist-item" id="chk-printer">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-printer"></i>
+                        <span>4. Setting Printer (192.168.88.10, GW: 192.168.88.1)</span>
+                    </div>
+                    <span class="item-points">10 Poin</span>
+                </div>
+
+                <div class="checklist-item" id="chk-pcs">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-pcs"></i>
+                        <span>5. Konfigurasi 5 PC (192.168.88.21 - 25) <b id="pc-progress">(0/5)</b></span>
+                    </div>
+                    <span class="item-points">30 Poin</span>
+                </div>
+
+                <div class="checklist-item" id="chk-laptops">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-laptops"></i>
+                        <span>6. Koneksikan 5 Laptop (192.168.88.51 - 55) <b id="lap-progress">(0/5)</b></span>
+                    </div>
+                    <span class="item-points">30 Poin</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal Card -->
+        <div class="card">
+            <div class="card-title"><span><i class="fa-solid fa-terminal"></i> Terminal Ping Test</span></div>
+            <div class="terminal-box" id="terminal-output">
+                <div>[SYSTEM] Menunggu pengujian PING...</div>
+            </div>
+            <div class="ping-controls">
+                <select id="ping-source"></select>
+                <select id="ping-target"></select>
+                <button class="btn-cisco" onclick="runPingTest()">Ping</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL CONFIGURATIONS ================= -->
+
+<!-- 1. Modal Router Mikrotik -->
+<div class="modal-overlay" id="router-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-server"></i> Konfigurasi Router MikroTik</h3>
+            <button onclick="closeModal('router-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="badge-info">Target Gateway: 192.168.88.1 | Netmask: 255.255.255.0</div>
+            <div class="form-grid">
+                <label>Nama Interface</label>
+                <input type="text" id="cfg-router-iface" value="ether2-ToSwitch">
+            </div>
+            <div class="form-grid">
+                <label>IP Address Gateway</label>
+                <input type="text" id="cfg-router-ip" placeholder="0.0.0.0">
+            </div>
+            <div class="form-grid">
+                <label>Subnet Mask</label>
+                <input type="text" id="cfg-router-mask" placeholder="0.0.0.0">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="saveRouterConfig()">Simpan Perubahan</button>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Modal Switch TP-Link -->
+<div class="modal-overlay" id="switch-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-network-wired"></i> Web GUI Switch TP-Link</h3>
+            <button onclick="closeModal('switch-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="badge-info">Aktifkan Port agar seluruh perangkat kabel terhubung.</div>
+            <div class="form-grid">
+                <label>Status Switch Port (All Ports)</label>
+                <select id="cfg-switch-status">
+                    <option value="disabled" selected>Disable (Port Mati)</option>
+                    <option value="enabled">Enable (Port Aktif)</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="saveSwitchConfig()">Simpan Perubahan</button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Modal Access Point -->
+<div class="modal-overlay" id="ap-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-wifi"></i> Web GUI Access Point TP-Link</h3>
+            <button onclick="closeModal('ap-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="badge-info">Target: IP Management: 192.168.88.2, SSID: WiFi_Kantor, Pass: admin123</div>
+            <div class="form-grid">
+                <label>Management IP Address</label>
+                <input type="text" id="cfg-ap-ip" placeholder="0.0.0.0">
+            </div>
+            <div class="form-grid">
+                <label>SSID (Nama WiFi)</label>
+                <input type="text" id="cfg-ap-ssid" placeholder="Nama SSID WiFi">
+            </div>
+            <div class="form-grid">
+                <label>WPA2-PSK Password</label>
+                <input type="text" id="cfg-ap-pass" placeholder="Password WiFi">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="saveAPConfig()">Simpan & Reboot AP</button>
+        </div>
+    </div>
+</div>
+
+<!-- 4. Modal Printer -->
+<div class="modal-overlay" id="printer-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-print"></i> Konfigurasi Network Printer</h3>
+            <button onclick="closeModal('printer-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="badge-info">Target: IP 192.168.88.10 | Subnet: 255.255.255.0 | GW: 192.168.88.1</div>
+            <div class="form-grid">
+                <label>IP Address Manual</label>
+                <input type="text" id="cfg-printer-ip" placeholder="0.0.0.0">
+            </div>
+            <div class="form-grid">
+                <label>Subnet Mask</label>
+                <input type="text" id="cfg-printer-mask" placeholder="0.0.0.0">
+            </div>
+            <div class="form-grid">
+                <label>Default Gateway</label>
+                <input type="text" id="cfg-printer-gw" placeholder="0.0.0.0">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="savePrinterConfig()">Simpan Perubahan</button>
+        </div>
+    </div>
+</div>
+
+<!-- 5. Modal PC Kabel -->
+<div class="modal-overlay" id="pc-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3 id="pc-modal-title"><i class="fa-solid fa-desktop"></i> Konfigurasi IP PC</h3>
+            <button onclick="closeModal('pc-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="badge-info" id="pc-target-info">Target Range IP: 192.168.88.21 s/d 192.168.88.25</div>
+            <input type="hidden" id="active-pc-id">
+            <div class="form-grid">
+                <label>IP Address Manual (IPv4)</label>
+                <input type="text" id="cfg-pc-ip" placeholder="192.168.88.x">
+            </div>
+            <div class="form-grid">
+                <label>Subnet Mask</label>
+                <input type="text" id="cfg-pc-mask" placeholder="255.255.255.0">
+            </div>
+            <div class="form-grid">
+                <label>Default Gateway</label>
+                <input type="text" id="cfg-pc-gw" placeholder="192.168.88.1">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="savePCConfig()">Simpan Perubahan</button>
+        </div>
+    </div>
+</div>
+
+<!-- 6. Modal Laptop WiFi -->
+<div class="modal-overlay" id="laptop-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3 id="laptop-modal-title"><i class="fa-solid fa-laptop"></i> Pengaturan Laptop WiFi</h3>
+            <button onclick="closeModal('laptop-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="active-laptop-id">
+            <div style="font-weight: 700; font-size: 11px; margin-bottom: 6px; color: var(--cisco-blue);">1. Otentikasi Wi-Fi</div>
+            <div class="form-grid">
+                <label>SSID Tujuan</label>
+                <input type="text" id="cfg-laptop-ssid" placeholder="Masukkan SSID AP">
+            </div>
+            <div class="form-grid">
+                <label>Password Wi-Fi</label>
+                <input type="password" id="cfg-laptop-pass" placeholder="Masukkan Password WPA2">
+            </div>
+
+            <div style="font-weight: 700; font-size: 11px; margin-top: 12px; margin-bottom: 6px; color: var(--cisco-blue);">2. Konfigurasi IP Statis (IPv4)</div>
+            <div class="form-grid">
+                <label>IP Address Manual</label>
+                <input type="text" id="cfg-laptop-ip" placeholder="192.168.88.x">
+            </div>
+            <div class="form-grid">
+                <label>Subnet Mask</label>
+                <input type="text" id="cfg-laptop-mask" placeholder="255.255.255.0">
+            </div>
+            <div class="form-grid">
+                <label>Default Gateway</label>
+                <input type="text" id="cfg-laptop-gw" placeholder="192.168.88.1">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="saveLaptopConfig()">Simpan & Hubungkan</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= JAVASCRIPT ENGINE & AUTO-GRADER ================= -->
+<script>
+    let routerConfig = { ip: "", mask: "", iface: "ether2-ToSwitch" };
+    let switchConfig = { portsEnabled: false };
+    let apConfig = { ip: "", ssid: "", pass: "" };
+    let printerConfig = { ip: "", mask: "", gw: "" };
+
+    let pcData = {
+        pc1: { name: "PC-1", ip: "", mask: "", gw: "" },
+        pc2: { name: "PC-2", ip: "", mask: "", gw: "" },
+        pc3: { name: "PC-3", ip: "", mask: "", gw: "" },
+        pc4: { name: "PC-4", ip: "", mask: "", gw: "" },
+        pc5: { name: "PC-5", ip: "", mask: "", gw: "" }
+    };
+
+    let laptopData = {
+        lap1: { name: "Laptop-1", connected: false, ssid: "", pass: "", ip: "", mask: "", gw: "" },
+        lap2: { name: "Laptop-2", connected: false, ssid: "", pass: "", ip: "", mask: "", gw: "" },
+        lap3: { name: "Laptop-3", connected: false, ssid: "", pass: "", ip: "", mask: "", gw: "" },
+        lap4: { name: "Laptop-4", connected: false, ssid: "", pass: "", ip: "", mask: "", gw: "" },
+        lap5: { name: "Laptop-5", connected: false, ssid: "", pass: "", ip: "", mask: "", gw: "" }
+    };
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function drawLine(id1, id2, isWireless, isConnected) {
+        const el1 = document.getElementById(id1);
+        const el2 = document.getElementById(id2);
+        const cvs = document.getElementById('canvas-area').getBoundingClientRect();
+        const r1 = el1.getBoundingClientRect();
+        const r2 = el2.getBoundingClientRect();
+        
+        const x1 = r1.left - cvs.left + r1.width/2;
+        const y1 = r1.top - cvs.top + r1.height/2;
+        const x2 = r2.left - cvs.left + r2.width/2;
+        const y2 = r2.top - cvs.top + r2.height/2;
+
+        let cls = "wired-line";
+        if (!switchConfig.portsEnabled && !isWireless) {
+            cls = "wired-line disabled";
+        } else if (!isWireless && switchConfig.portsEnabled) {
+            cls = "wired-line active";
+        } else if (isWireless) {
+            cls = isConnected ? "wireless-line connected" : "wireless-line";
+        }
+        return `<line class="${cls}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`;
+    }
+
+    function renderTopology() {
+        let svg = '';
+        svg += drawLine('router-node', 'switch-node', false);
+        svg += drawLine('switch-node', 'ap-node', false);
+        svg += drawLine('switch-node', 'printer-node', false);
+        for(let i=1; i<=5; i++) svg += drawLine('switch-node', `pc${i}-node`, false);
+        
+        for(let i=1; i<=5; i++) {
+            let key = `lap${i}`;
+            let isConn = laptopData[key].connected && switchConfig.portsEnabled;
+            svg += drawLine('ap-node', `${key}-node`, true, isConn);
+        }
+        document.getElementById('svg-connections').innerHTML = svg;
+    }
+
+    window.addEventListener('resize', renderTopology);
+    setTimeout(() => { renderTopology(); evaluateTasks(); }, 300);
+
+    function openPCModal(id) {
+        document.getElementById('active-pc-id').value = id;
+        document.getElementById('pc-modal-title').innerHTML = `<i class="fa-solid fa-desktop"></i> Konfigurasi ${pcData[id].name}`;
+        document.getElementById('cfg-pc-ip').value = pcData[id].ip;
+        document.getElementById('cfg-pc-mask').value = pcData[id].mask;
+        document.getElementById('cfg-pc-gw').value = pcData[id].gw;
+        openModal('pc-modal');
+    }
+
+    function openLaptopModal(id) {
+        document.getElementById('active-laptop-id').value = id;
+        document.getElementById('laptop-modal-title').innerHTML = `<i class="fa-solid fa-laptop"></i> Pengaturan ${laptopData[id].name}`;
+        document.getElementById('cfg-laptop-ssid').value = laptopData[id].ssid;
+        document.getElementById('cfg-laptop-pass').value = laptopData[id].pass;
+        document.getElementById('cfg-laptop-ip').value = laptopData[id].ip;
+        document.getElementById('cfg-laptop-mask').value = laptopData[id].mask;
+        document.getElementById('cfg-laptop-gw').value = laptopData[id].gw;
+        openModal('laptop-modal');
+    }
+
+    function saveRouterConfig() {
+        routerConfig.ip = document.getElementById('cfg-router-ip').value.trim();
+        routerConfig.mask = document.getElementById('cfg-router-mask').value.trim();
+
+        document.getElementById('lbl-router-ip').innerText = routerConfig.ip || "Unconfigured";
+        logTerminal(`[ROUTER] Gateway IP: ${routerConfig.ip || '0.0.0.0'}`, "terminal-warn");
+        closeModal('router-modal');
+        evaluateTasks();
+    }
+
+    function saveSwitchConfig() {
+        let status = document.getElementById('cfg-switch-status').value;
+        switchConfig.portsEnabled = (status === "enabled");
+
+        document.getElementById('lbl-switch-status').innerText = switchConfig.portsEnabled ? "Port: Enable" : "Port: Disable";
+        logTerminal(`[SWITCH] Port Switch: ${switchConfig.portsEnabled ? 'ENABLE' : 'DISABLE'}`, switchConfig.portsEnabled ? "terminal-success" : "terminal-fail");
+        closeModal('switch-modal');
+        evaluateTasks();
+    }
+
+    function saveAPConfig() {
+        apConfig.ip = document.getElementById('cfg-ap-ip').value.trim();
+        apConfig.ssid = document.getElementById('cfg-ap-ssid').value.trim();
+        apConfig.pass = document.getElementById('cfg-ap-pass').value.trim();
+
+        document.getElementById('lbl-ap-ip').innerText = apConfig.ip || "Unconfigured";
+        logTerminal(`[ACCESS POINT] IP: ${apConfig.ip}, SSID: "${apConfig.ssid}"`, "terminal-warn");
+        
+        for(let i=1; i<=5; i++) {
+            let k = `lap${i}`;
+            if(laptopData[k].ssid !== apConfig.ssid || laptopData[k].pass !== apConfig.pass || apConfig.ssid === "") {
+                laptopData[k].connected = false;
+            }
+        }
+        closeModal('ap-modal');
+        evaluateTasks();
+    }
+
+    function savePrinterConfig() {
+        printerConfig.ip = document.getElementById('cfg-printer-ip').value.trim();
+        printerConfig.mask = document.getElementById('cfg-printer-mask').value.trim();
+        printerConfig.gw = document.getElementById('cfg-printer-gw').value.trim();
+
+        document.getElementById('lbl-printer-ip').innerText = printerConfig.ip || "Unconfigured";
+        logTerminal(`[PRINTER] IP: ${printerConfig.ip || '0.0.0.0'}`, "terminal-warn");
+        closeModal('printer-modal');
+        evaluateTasks();
+    }
+
+    function savePCConfig() {
+        let id = document.getElementById('active-pc-id').value;
+        pcData[id].ip = document.getElementById('cfg-pc-ip').value.trim();
+        pcData[id].mask = document.getElementById('cfg-pc-mask').value.trim();
+        pcData[id].gw = document.getElementById('cfg-pc-gw').value.trim();
+
+        document.getElementById(`lbl-${id}-ip`).innerText = pcData[id].ip || "Unconfigured";
+        logTerminal(`[PC] ${pcData[id].name} IP: ${pcData[id].ip}`, "terminal-warn");
+        closeModal('pc-modal');
+        evaluateTasks();
+    }
+
+    function saveLaptopConfig() {
+        let id = document.getElementById('active-laptop-id').value;
+        laptopData[id].ssid = document.getElementById('cfg-laptop-ssid').value.trim();
+        laptopData[id].pass = document.getElementById('cfg-laptop-pass').value.trim();
+        laptopData[id].ip = document.getElementById('cfg-laptop-ip').value.trim();
+        laptopData[id].mask = document.getElementById('cfg-laptop-mask').value.trim();
+        laptopData[id].gw = document.getElementById('cfg-laptop-gw').value.trim();
+
+        let isAuthOk = (apConfig.ssid !== "" && laptopData[id].ssid === apConfig.ssid && laptopData[id].pass === apConfig.pass);
+        laptopData[id].connected = isAuthOk;
+
+        document.getElementById(`lbl-${id}-ip`).innerText = laptopData[id].ip || "Disconnected";
+        if(isAuthOk) {
+            logTerminal(`[WIFI] ${laptopData[id].name} terhubung ke SSID "${laptopData[id].ssid}"`, "terminal-success");
+        } else {
+            logTerminal(`[WIFI GAGAL] ${laptopData[id].name} gagal terhubung`, "terminal-fail");
+        }
+
+        closeModal('laptop-modal');
+        evaluateTasks();
+    }
+
+    function evaluateTasks() {
+        let totalScore = 0;
+
+        let isRouterOk = (routerConfig.ip === "192.168.88.1" && routerConfig.mask === "255.255.255.0");
+        updateChecklistState('router', isRouterOk);
+        updateNodeState('router-node', 'router-badge', isRouterOk);
+        if(isRouterOk) totalScore += 10;
+
+        let isSwitchOk = switchConfig.portsEnabled;
+        updateChecklistState('switch', isSwitchOk);
+        updateNodeState('switch-node', 'switch-badge', isSwitchOk);
+        if(isSwitchOk) totalScore += 10;
+
+        let isApOk = (apConfig.ip === "192.168.88.2" && apConfig.ssid === "WiFi_Kantor" && apConfig.pass === "admin123");
+        updateChecklistState('ap', isApOk);
+        updateNodeState('ap-node', 'ap-badge', isApOk);
+        if(isApOk) totalScore += 10;
+
+        let isPrinterOk = (printerConfig.ip === "192.168.88.10" && printerConfig.mask === "255.255.255.0" && printerConfig.gw === "192.168.88.1");
+        updateChecklistState('printer', isPrinterOk);
+        updateNodeState('printer-node', 'printer-badge', isPrinterOk);
+        if(isPrinterOk) totalScore += 10;
+
+        let pcSuccessCount = 0;
+        for(let i=1; i<=5; i++) {
+            let pc = pcData[`pc${i}`];
+            let targetIp = `192.168.88.${20+i}`;
+            let isPcOk = (pc.ip === targetIp && pc.mask === "255.255.255.0" && pc.gw === "192.168.88.1");
+            updateNodeState(`pc${i}-node`, `pc${i}-badge`, isPcOk);
+            if(isPcOk) pcSuccessCount++;
+        }
+        document.getElementById('pc-progress').innerText = `(${pcSuccessCount}/5)`;
+        updateChecklistState('pcs', pcSuccessCount === 5);
+        totalScore += (pcSuccessCount * 6);
+
+        let lapSuccessCount = 0;
+        for(let i=1; i<=5; i++) {
+            let lap = laptopData[`lap${i}`];
+            let targetIp = `192.168.88.${50+i}`;
+            let isLapOk = (lap.connected && lap.ip === targetIp && lap.mask === "255.255.255.0" && lap.gw === "192.168.88.1");
+            updateNodeState(`lap${i}-node`, `lap${i}-badge`, isLapOk);
+            if(isLapOk) lapSuccessCount++;
+        }
+        document.getElementById('lap-progress').innerText = `(${lapSuccessCount}/5)`;
+        updateChecklistState('laptops', lapSuccessCount === 5);
+        totalScore += (lapSuccessCount * 6);
+
+        document.getElementById('total-score').innerText = `${totalScore} / 100`;
+
+        renderTopology();
+        updatePingTargets();
+    }
+
+    function updateChecklistState(key, isDone) {
+        let item = document.getElementById(`chk-${key}`);
+        let icon = document.getElementById(`icon-${key}`);
+        if(isDone) {
+            item.classList.add('completed');
+            icon.className = "fa-solid fa-circle-check";
+        } else {
+            item.classList.remove('completed');
+            icon.className = "fa-regular fa-circle-check";
+        }
+    }
+
+    function updateNodeState(nodeId, badgeId, isOk) {
+        let node = document.getElementById(nodeId);
+        let badge = document.getElementById(badgeId);
+        if(isOk) {
+            node.classList.add('configured');
+            badge.className = "status-badge online";
+            badge.innerHTML = '<i class="fa-solid fa-check"></i>';
+        } else {
+            node.classList.remove('configured');
+            badge.className = "status-badge";
+            badge.innerHTML = '!';
+        }
+    }
+
+    function updatePingTargets() {
+        const srcSel = document.getElementById('ping-source');
+        const dstSel = document.getElementById('ping-target');
+        
+        const curSrc = srcSel.value;
+        const curDst = dstSel.value;
+
+        let optionsHtml = '';
+        if(routerConfig.ip) optionsHtml += `<option value="router">Router (${routerConfig.ip})</option>`;
+        if(apConfig.ip) optionsHtml += `<option value="ap">Access Point (${apConfig.ip})</option>`;
+        if(printerConfig.ip) optionsHtml += `<option value="printer">Printer (${printerConfig.ip})</option>`;
+        
+        for(let i=1; i<=5; i++) {
+            if(pcData[`pc${i}`].ip) {
+                optionsHtml += `<option value="pc${i}">${pcData[`pc${i}`].name} (${pcData[`pc${i}`].ip})</option>`;
+            }
+        }
+        for(let i=1; i<=5; i++) {
+            if(laptopData[`lap${i}`].ip) {
+                optionsHtml += `<option value="lap${i}">${laptopData[`lap${i}`].name} (${laptopData[`lap${i}`].ip})</option>`;
+            }
+        }
+
+        if(!optionsHtml) optionsHtml = `<option value="">-- Tidak ada IP Aktif --</option>`;
+
+        srcSel.innerHTML = optionsHtml;
+        dstSel.innerHTML = optionsHtml;
+
+        if(curSrc) srcSel.value = curSrc;
+        if(curDst) dstSel.value = curDst;
+    }
+
+    function runPingTest() {
+        let srcKey = document.getElementById('ping-source').value;
+        let dstKey = document.getElementById('ping-target').value;
+
+        if(!srcKey || !dstKey) {
+            logTerminal(`[ERROR] Pilih perangkat pengirim dan penerima!`, "terminal-fail");
+            return;
+        }
+
+        let srcObj = getDeviceObj(srcKey);
+        let dstObj = getDeviceObj(dstKey);
+
+        logTerminal(`\n> PING ${dstObj.name} (${dstObj.ip}) from ${srcObj.name} (${srcObj.ip}):`);
+
+        if(!switchConfig.portsEnabled) {
+            logTerminal(`Request timed out. [Port Switch Masih Mati/Disable]`, "terminal-fail");
+            return;
+        }
+
+        if(srcKey.startsWith('lap') && !srcObj.connected) {
+            logTerminal(`PING Gagal: ${srcObj.name} belum terhubung ke WiFi AP!`, "terminal-fail");
+            return;
+        }
+        if(dstKey.startsWith('lap') && !dstObj.connected) {
+            logTerminal(`Request timed out. [Target ${dstObj.name} terputus dari WiFi]`, "terminal-fail");
+            return;
+        }
+
+        function getSubnet(ip) { return ip.substring(0, ip.lastIndexOf('.')); }
+        if(getSubnet(srcObj.ip) !== getSubnet(dstObj.ip) || !srcObj.ip.startsWith("192.168.88.")) {
+            logTerminal(`Destination Host Unreachable. [Subnet Mismatch]`, "terminal-fail");
+            return;
+        }
+
+        logTerminal(`Reply from ${dstObj.ip}: bytes=32 time=2ms TTL=64`, "terminal-success");
+        logTerminal(`Reply from ${dstObj.ip}: bytes=32 time=1ms TTL=64`, "terminal-success");
+        logTerminal(`Ping statistics: Sent = 2, Received = 2, Lost = 0 (0% loss).`, "terminal-success");
+    }
+
+    function getDeviceObj(key) {
+        if(key === 'router') return { name: "Router MikroTik", ip: routerConfig.ip };
+        if(key === 'ap') return { name: "Access Point", ip: apConfig.ip };
+        if(key === 'printer') return { name: "Printer Network", ip: printerConfig.ip };
+        if(key.startsWith('pc')) return pcData[key];
+        if(key.startsWith('lap')) return laptopData[key];
+    }
+
+    function resetAllConfigs() {
+        routerConfig = { ip: "", mask: "", iface: "ether2-ToSwitch" };
+        switchConfig = { portsEnabled: false };
+        apConfig = { ip: "", ssid: "", pass: "" };
+        printerConfig = { ip: "", mask: "", gw: "" };
+
+        for(let i=1; i<=5; i++) {
+            pcData[`pc${i}`] = { name: `PC-${i}`, ip: "", mask: "", gw: "" };
+            laptopData[`lap${i}`] = { name: `Laptop-${i}`, connected: false, ssid: "", pass: "", ip: "", mask: "", gw: "" };
+            document.getElementById(`lbl-pc${i}-ip`).innerText = "Unconfigured";
+            document.getElementById(`lbl-lap${i}-ip`).innerText = "Disconnected";
+        }
+
+        document.getElementById('lbl-router-ip').innerText = "Unconfigured";
+        document.getElementById('lbl-switch-status').innerText = "Port: Disable";
+        document.getElementById('cfg-switch-status').value = "disabled";
+        document.getElementById('lbl-ap-ip').innerText = "Unconfigured";
+        document.getElementById('lbl-printer-ip').innerText = "Unconfigured";
+
+        logTerminal(`[SYSTEM] Simulasi direset. Semua status kembali ke Unconfigured.`, "terminal-warn");
+        evaluateTasks();
+    }
+
+    function logTerminal(msg, cls="") {
+        let box = document.getElementById('terminal-output');
+        box.innerHTML += `<div class="${cls}">${msg}</div>`;
+        box.scrollTop = box.scrollHeight;
+    }
+</script>
+</body>
+</html>

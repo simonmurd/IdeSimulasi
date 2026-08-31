@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LKPD Interaktif - Simulasi Konfigurasi Router (Mobile Friendly)</title>
+    <!-- Google Fonts & Font Awesome Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --cisco-blue: #005073;
+            --cisco-light-blue: #0284c7;
+            --cisco-accent: #06b6d4;
+            --bg-light: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #e2e8f0;
+            color: var(--text-dark);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        /* HEADER STYLING */
+        header {
+            background: linear-gradient(135deg, var(--cisco-blue) 0%, #00334e 100%);
+            color: #ffffff;
+            padding: 24px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid var(--cisco-accent);
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-title i {
+            font-size: 32px;
+            color: var(--cisco-accent);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .header-title h1 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .header-title p {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .header-badge {
+            background-color: rgba(6, 182, 212, 0.15);
+            border: 1px solid var(--cisco-accent);
+            color: var(--cisco-accent);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* STUDENT IDENTITY FORM */
+        .identity-bar {
+            background-color: #f1f5f9;
+            padding: 16px 32px;
+            border-bottom: 1px solid var(--border-color);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .input-group input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            background-color: #ffffff;
+            color: var(--text-dark);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--cisco-light-blue);
+        }
+
+        /* TOPOLOGY ANIMATION CANVAS */
+        .topology-section {
+            padding: 24px 32px;
+            background-color: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .section-header h2 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--cisco-blue);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .topology-canvas {
+            position: relative;
+            height: 420px;
+            background-color: #fafafa;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 24px 24px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .connections-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .wireless-line {
+            stroke: #cbd5e1;
+            stroke-width: 2;
+            stroke-dasharray: 6 6;
+            transition: all 0.5s ease;
+        }
+
+        .wireless-line.connected {
+            stroke: var(--cisco-accent);
+            stroke-width: 2.5;
+            stroke-dasharray: 8 4;
+            animation: dashPulse 1.5s linear infinite;
+        }
+
+        @keyframes dashPulse {
+            to { stroke-dashoffset: -24; }
+        }
+
+        /* DEVICE NODES */
+        .device-node {
+            position: absolute;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.2s ease, filter 0.2s ease;
+            user-select: none;
+        }
+
+        .device-node:hover {
+            transform: translateY(-4px);
+        }
+
+        .device-icon-box {
+            width: 72px;
+            height: 72px;
+            background-color: #ffffff;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .device-node:hover .device-icon-box {
+            border-color: var(--cisco-light-blue);
+            box-shadow: 0 6px 16px rgba(2, 132, 199, 0.15);
+        }
+
+        .device-icon-box i {
+            font-size: 32px;
+            color: var(--cisco-blue);
+        }
+
+        .router-node .device-icon-box {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+            border: 2px solid var(--cisco-blue);
+        }
+
+        .router-node .device-icon-box i {
+            font-size: 42px;
+            color: var(--cisco-blue);
+        }
+
+        .device-label {
+            margin-top: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dark);
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .device-status {
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .status-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: var(--danger-color);
+            border: 2px solid #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: #ffffff;
+        }
+
+        .status-badge.online {
+            background-color: var(--success-color);
+        }
+
+        .wifi-signal-wave {
+            position: absolute;
+            width: 130px;
+            height: 130px;
+            border: 2px solid var(--cisco-accent);
+            border-radius: 50%;
+            opacity: 0;
+            animation: wifiWave 2.5s ease-out infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes wifiWave {
+            0% { transform: scale(0.6); opacity: 0.8; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+
+        /* POSITIONS ON TOPOLOGY CANVAS (Desktop Default) */
+        #router-node { top: 10%; left: 50%; transform: translateX(-50%); }
+
+        /* Kiri */
+        #phone1-node { top: 55%; left: 10%; }
+        #phone2-node { top: 55%; left: 25%; }
+        #phone3-node { top: 55%; left: 40%; }
+
+        /* Kanan */
+        #laptop3-node { top: 55%; right: 40%; }
+        #laptop2-node { top: 55%; right: 25%; }
+        #laptop1-node { top: 55%; right: 10%; }
+
+        /* LKPD WORKSHEET CONTENT AREA */
+        .lkpd-body {
+            padding: 32px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+        }
+
+        .card {
+            background-color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--cisco-blue);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 10px;
+        }
+
+        .task-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .task-checkbox {
+            margin-top: 3px;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--cisco-light-blue);
+            cursor: pointer;
+        }
+
+        .task-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .task-info p {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* PING SIMULATION TERMINAL */
+        .terminal-box {
+            background-color: #0f172a;
+            color: #38bdf8;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            border-radius: 8px;
+            padding: 16px;
+            height: 220px;
+            overflow-y: auto;
+            border: 1px solid #1e293b;
+        }
+
+        .terminal-line {
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        .terminal-success { color: #4ade80; }
+        .terminal-fail { color: #f87171; }
+        .terminal-warning { color: #fbbf24; }
+
+        .ping-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto auto;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .ping-controls select, .ping-controls button {
+            padding: 8px 12px;
+            font-size: 13px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-family: inherit;
+        }
+
+        .btn-cisco {
+            background-color: var(--cisco-blue);
+            color: #ffffff;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-cisco:hover {
+            background-color: var(--cisco-light-blue);
+        }
+
+        /* MODAL DIALOGS */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .cisco-modal {
+            background-color: #ffffff;
+            width: 620px;
+            max-width: 95%;
+            border-radius: 10px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            background-color: var(--cisco-blue);
+            color: #ffffff;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 18px;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+
+        .close-btn:hover { opacity: 1; }
+
+        .cisco-tabs {
+            display: flex;
+            background-color: #f1f5f9;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 16px;
+        }
+
+        .tab-btn {
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--cisco-blue);
+            border-bottom-color: var(--cisco-light-blue);
+            background-color: #ffffff;
+        }
+
+        .modal-body {
+            padding: 24px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 160px 1fr;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+
+        .form-grid label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .form-grid input[type="text"],
+        .form-grid input[type="password"],
+        .form-grid select {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 16px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            background-color: #f8fafc;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: var(--text-dark);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .network-list {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .network-item {
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .score-box {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid var(--cisco-accent);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            margin-top: 16px;
+        }
+
+        .score-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--cisco-blue);
+        }
+
+        /* -------------------------------------------
+           RESPONSIVE & MOBILE STYLES
+           ------------------------------------------- */
+        @media (max-width: 992px) {
+            .lkpd-body { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            
+            header { 
+                flex-direction: column; 
+                text-align: center; 
+                padding: 20px 16px; 
+                gap: 16px; 
+            }
+            .header-title { flex-direction: column; }
+            .identity-bar { grid-template-columns: 1fr; padding: 16px; }
+            
+            .topology-section { padding: 16px; }
+            .section-header h2 { font-size: 14px; }
+            .topology-canvas { height: 500px; }
+            .lkpd-body { padding: 16px; gap: 16px; }
+            .card { padding: 16px; }
+            
+            /* Menyesuaikan ukuran Icon & Label */
+            .device-icon-box { width: 52px; height: 52px; }
+            .device-icon-box i { font-size: 22px; }
+            .router-node .device-icon-box { width: 70px; height: 70px; }
+            .router-node .device-icon-box i { font-size: 32px; }
+            .device-label { font-size: 10px; padding: 2px 4px; }
+            
+            /* Menyusun ulang posisi topologi ke 3 baris di perangkat seluler */
+            #router-node { top: 8%; left: 50%; }
+            
+            /* Baris Tengah (Smartphone) */
+            #phone1-node { top: 38%; left: 16%; transform: translateX(-50%); }
+            #phone2-node { top: 38%; left: 50%; transform: translateX(-50%); }
+            #phone3-node { top: 38%; left: 84%; transform: translateX(-50%); }
+
+            /* Baris Bawah (Laptop) - right dibuat auto agar left bisa bekerja */
+            #laptop1-node { top: 72%; right: auto; left: 16%; transform: translateX(-50%); }
+            #laptop2-node { top: 72%; right: auto; left: 50%; transform: translateX(-50%); }
+            #laptop3-node { top: 72%; right: auto; left: 84%; transform: translateX(-50%); }
+            
+            /* Penyesuaian Modal pada Mobile */
+            .cisco-tabs { flex-wrap: wrap; padding: 0; }
+            .tab-btn { flex: 1 1 50%; padding: 12px; text-align: center; border-bottom: 1px solid var(--border-color); }
+            
+            .form-grid { grid-template-columns: 1fr; gap: 6px; margin-bottom: 16px; }
+            .form-grid label { font-size: 12px; }
+            
+            .radio-group { flex-direction: column; gap: 8px; }
+            
+            .modal-footer { flex-direction: column; }
+            .modal-footer button { width: 100%; padding: 12px; }
+            
+            /* Kontrol Uji Ping Stack Kebawah */
+            .ping-controls { grid-template-columns: 1fr; }
+        }
+
+        /* PRINT STYLES */
+        @media print {
+            body { background-color: #fff; padding: 0; }
+            .container { box-shadow: none; border: none; }
+            .ping-controls, .btn-cisco, .modal-overlay, .section-header span { display: none !important; }
+            .topology-canvas { height: 350px; border: 1px solid #ccc; }
+            .score-box { border: 2px solid #005073; background: #fff; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- HEADER -->
+    <header>
+        <div class="header-title">
+            <i class="fa-solid fa-network-wired"></i>
+            <div>
+                <h1>LKPD Interaktif: Simulasi Konfigurasi Router & AP Isolation</h1>
+                <p>Modul Praktikum Jaringan Komputer & Telekomunikasi (Cisco Packet Tracer Style)</p>
+            </div>
+        </div>
+        <div class="header-badge">E-LKPD SMK TKJ / SIJA</div>
+    </header>
+
+    <!-- FORM IDENTITAS SISWA -->
+    <div class="identity-bar">
+        <div class="input-group">
+            <label>Nama Siswa / Kelompok</label>
+            <input type="text" id="student-name" placeholder="Ketik nama lengkap...">
+        </div>
+        <div class="input-group">
+            <label>Kelas / Konsentrasi</label>
+            <input type="text" id="student-class" placeholder="Contoh: XI TKJ 1">
+        </div>
+        <div class="input-group">
+            <label>Tanggal Praktikum</label>
+            <input type="date" id="student-date">
+        </div>
+    </div>
+
+    <!-- SIMULATION CANVAS (TOPOLOGY) -->
+    <div class="topology-section">
+        <div class="section-header">
+            <h2><i class="fa-solid fa-diagram-project"></i> Topologi Jaringan Nirkabel Interaktif</h2>
+            <span style="font-size: 12px; color: var(--text-muted);"><i class="fa-solid fa-hand-pointer"></i> Klik Perangkat untuk konfigurasi</span>
+        </div>
+
+        <div class="topology-canvas" id="canvas-area">
+            <!-- SVG lines for connection rendering -->
+            <svg class="connections-svg" id="svg-connections"></svg>
+
+            <!-- ROUTER NODE -->
+            <div class="device-node router-node" id="router-node" onclick="openRouterModal()">
+                <div class="wifi-signal-wave"></div>
+                <div class="device-icon-box">
+                    <i class="fa-solid fa-wifi"></i>
+                    <div class="status-badge online" id="router-badge" title="Status Online"><i class="fa-solid fa-check"></i></div>
+                </div>
+                <div class="device-label">Wireless Router</div>
+                <div class="device-status" id="router-ssid-label">SSID: TKJ_NET_WIFI</div>
+            </div>
+
+            <!-- SMARTPHONES -->
+            <div class="device-node" id="phone1-node" onclick="openClientModal('phone1')">
+                <div class="device-icon-box">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                    <div class="status-badge" id="phone1-badge">!</div>
+                </div>
+                <div class="device-label">Smartphone-01</div>
+                <div class="device-status" id="phone1-status">Terputus</div>
+            </div>
+
+            <div class="device-node" id="phone2-node" onclick="openClientModal('phone2')">
+                <div class="device-icon-box">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                    <div class="status-badge" id="phone2-badge">!</div>
+                </div>
+                <div class="device-label">Smartphone-02</div>
+                <div class="device-status" id="phone2-status">Terputus</div>
+            </div>
+
+            <div class="device-node" id="phone3-node" onclick="openClientModal('phone3')">
+                <div class="device-icon-box">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                    <div class="status-badge" id="phone3-badge">!</div>
+                </div>
+                <div class="device-label">Smartphone-03</div>
+                <div class="device-status" id="phone3-status">Terputus</div>
+            </div>
+
+            <!-- LAPTOPS -->
+            <div class="device-node" id="laptop1-node" onclick="openClientModal('laptop1')">
+                <div class="device-icon-box">
+                    <i class="fa-solid fa-laptop"></i>
+                    <div class="status-badge" id="laptop1-badge">!</div>
+                </div>
+                <div class="device-label">Laptop-01</div>
+                <div class="device-status" id="laptop1-status">Terputus</div>
+            </div>
+
+            <div class="device-node" id="laptop2-node" onclick="openClientModal('laptop2')">
+                <div class="device-icon-box">
+                    <i class="fa-solid fa-laptop"></i>
+                    <div class="status-badge" id="laptop2-badge">!</div>
+                </div>
+                <div class="device-label">Laptop-02</div>
+                <div class="device-status" id="laptop2-status">Terputus</div>
+            </div>
+
+            <div class="device-node" id="laptop3-node" onclick="openClientModal('laptop3')">
+                <div class="device-icon-box">
+                    <i class="fa-solid fa-laptop"></i>
+                    <div class="status-badge" id="laptop3-badge">!</div>
+                </div>
+                <div class="device-label">Laptop-03</div>
+                <div class="device-status" id="laptop3-status">Terputus</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LKPD BODY: INSTRUCTIONS, TASKS, & PING SIMULATION -->
+    <div class="lkpd-body">
+        <!-- LEFT COLUMN: TASK CHECKLIST -->
+        <div class="card">
+            <div class="card-title">
+                <i class="fa-solid fa-list-check"></i> Petunjuk &amp; Tugas Praktikum
+            </div>
+            <ul class="task-list">
+                <li class="task-item">
+                    <input type="checkbox" class="task-checkbox" id="task1-chk" disabled>
+                    <div class="task-info">
+                        <h4>1. Pengamanan Admin Router</h4>
+                        <p>Klik Router -&gt; Tab 'Setup' -&gt; Ubah kata sandi administrator default menjadi sandi baru yang kuat.</p>
+                    </div>
+                </li>
+                <li class="task-item">
+                    <input type="checkbox" class="task-checkbox" id="task2-chk" disabled>
+                    <div class="task-info">
+                        <h4>2. Konfigurasi SSID &amp; WPA2-PSK</h4>
+                        <p>Atur nama SSID Router menjadi <code style="color:var(--cisco-light-blue);">SMK_JUARA_NET</code> dan kata sandi WPA2-PSK minimal 8 karakter.</p>
+                    </div>
+                </li>
+                <li class="task-item">
+                    <input type="checkbox" class="task-checkbox" id="task3-chk" disabled>
+                    <div class="task-info">
+                        <h4>3. Hubungkan Seluruh Perangkat Klien</h4>
+                        <p>Hubungkan ke-3 Smartphone dan ke-3 Laptop ke SSID Wi-Fi router menggunakan kata sandi WPA2-PSK yang benar.</p>
+                    </div>
+                </li>
+                <li class="task-item">
+                    <input type="checkbox" class="task-checkbox" id="task4-chk" disabled>
+                    <div class="task-info">
+                        <h4>4. Pengujian SSID Broadcast &amp; AP Isolation</h4>
+                        <p>Uji penyembunyian SSID serta aktifkan AP Isolation di router, kemudian lakukan pengujian PING antar perangkat.</p>
+                    </div>
+                </li>
+            </ul>
+
+            <div class="score-box">
+                <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">SKOR EVALUASI SIMULASI</div>
+                <div class="score-value" id="total-score">0 / 100</div>
+                <button class="btn-cisco" style="margin-top: 10px; width: 100%; padding: 10px; border-radius: 6px;" onclick="evaluateLKPD()"><i class="fa-solid fa-square-check"></i> Evaluasi &amp; Simpan Hasil LKPD</button>
+                <button class="btn-secondary" style="margin-top: 8px; width: 100%; padding: 10px; border-radius: 6px;" onclick="window.print()">
+                    <i class="fa-solid fa-print"></i> Cetak Laporan (PDF)
+                </button>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: PING TEST TERMINAL -->
+        <div class="card">
+            <div class="card-title">
+                <i class="fa-solid fa-terminal"></i> Terminal Uji Konektivitas (Ping Test)
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+                Gunakan alat ini untuk menguji koneksi (ICMP Ping) dari perangkat sumber ke tujuan. Amati dampaknya saat <strong>AP Client Isolation</strong> diaktifkan!
+            </p>
+
+            <div class="terminal-box" id="terminal-output">
+                <div class="terminal-line">[SYSTEM] Terminal Uji Konektivitas Siap.</div>
+                <div class="terminal-line">[INFO] Silakan hubungkan perangkat ke Wi-Fi sebelum memulai uji PING.</div>
+            </div>
+
+            <div class="ping-controls">
+                <select id="ping-source">
+                    <option value="phone1">Smartphone-01 (192.168.1.101)</option>
+                    <option value="phone2">Smartphone-02 (192.168.1.102)</option>
+                    <option value="laptop1">Laptop-01 (192.168.1.104)</option>
+                    <option value="laptop2">Laptop-02 (192.168.1.105)</option>
+                </select>
+                <select id="ping-target">
+                    <option value="router">Wireless Router (192.168.1.1)</option>
+                    <option value="laptop1">Laptop-01 (192.168.1.104)</option>
+                    <option value="laptop2">Laptop-02 (192.168.1.105)</option>
+                    <option value="phone2">Smartphone-02 (192.168.1.102)</option>
+                </select>
+                <button class="btn-cisco" onclick="runPingTest()"><i class="fa-solid fa-play"></i> Ping</button>
+                <button class="btn-secondary" onclick="clearTerminal()"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 1: ROUTER CONFIGURATION -->
+<div class="modal-overlay" id="router-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-sliders"></i> Cisco Router GUI</h3>
+            <button class="close-btn" onclick="closeModal('router-modal')">&times;</button>
+        </div>
+
+        <div class="cisco-tabs">
+            <button class="tab-btn active" onclick="switchTab('router', 'setup-tab')">Basic Setup</button>
+            <button class="tab-btn" onclick="switchTab('router', 'wireless-tab')">Wireless</button>
+            <button class="tab-btn" onclick="switchTab('router', 'security-tab')">Security</button>
+            <button class="tab-btn" onclick="switchTab('router', 'advanced-tab')">Advanced</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="tab-content active" id="router-setup-tab">
+                <div class="form-grid">
+                    <label>IP Address Router</label>
+                    <input type="text" id="cfg-router-ip" value="192.168.1.1" disabled>
+                </div>
+                <div class="form-grid">
+                    <label>Admin Password Default</label>
+                    <input type="password" id="cfg-admin-pass" value="admin">
+                </div>
+            </div>
+
+            <div class="tab-content" id="router-wireless-tab">
+                <div class="form-grid">
+                    <label>Network Name (SSID)</label>
+                    <input type="text" id="cfg-ssid" value="TKJ_NET_WIFI" placeholder="Ketik nama SSID...">
+                </div>
+            </div>
+
+            <div class="tab-content" id="router-security-tab">
+                <div class="form-grid">
+                    <label>Security Mode</label>
+                    <select id="cfg-sec-mode">
+                        <option value="Disabled">Disabled (Open Network)</option>
+                        <option value="WPA2-PSK" selected>WPA2 - Personal</option>
+                    </select>
+                </div>
+                <div class="form-grid">
+                    <label>WPA Passphrase</label>
+                    <input type="text" id="cfg-wpa-pass" value="Password123" placeholder="Minimal 8 karakter...">
+                </div>
+            </div>
+
+            <div class="tab-content" id="router-advanced-tab">
+                <div class="form-grid">
+                    <label>SSID Broadcast</label>
+                    <div class="radio-group">
+                        <label class="radio-option"><input type="radio" name="ssid-broadcast" value="enabled" checked> Enable</label>
+                        <label class="radio-option"><input type="radio" name="ssid-broadcast" value="disabled"> Disable</label>
+                    </div>
+                </div>
+                <hr style="margin: 16px 0; border: none; border-top: 1px solid #e2e8f0;">
+                <div class="form-grid">
+                    <label>AP Client Isolation</label>
+                    <div class="radio-group">
+                        <label class="radio-option"><input type="radio" name="client-isolation" value="disabled" checked> Disable</label>
+                        <label class="radio-option"><input type="radio" name="client-isolation" value="enabled"> Enable</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('router-modal')">Batal</button>
+            <button class="btn-cisco" onclick="saveRouterConfig()">Simpan Konfigurasi</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: CLIENT DEVICE CONFIGURATION -->
+<div class="modal-overlay" id="client-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3 id="client-modal-title"><i class="fa-solid fa-wifi"></i> Konfigurasi Wi-Fi</h3>
+            <button class="close-btn" onclick="closeModal('client-modal')">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <input type="hidden" id="active-client-id">
+            
+            <div class="form-grid">
+                <label>Perangkat ID</label>
+                <input type="text" id="client-device-name" disabled>
+            </div>
+            
+            <hr style="margin: 16px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+            <div class="form-grid">
+                <label>Metode Sambungan</label>
+                <select id="client-connect-method" onchange="toggleClientConnectMethod()">
+                    <option value="scan">Pindai SSID (Scan)</option>
+                    <option value="manual">Manual Input (Hidden SSID)</option>
+                </select>
+            </div>
+
+            <div id="scan-method-area">
+                <button class="btn-cisco" style="width: 100%; padding: 8px; font-size: 12px; margin-top: 6px;" onclick="scanAvailableNetworks()">
+                    <i class="fa-solid fa-arrows-rotate"></i> Pindai Jaringan Wi-Fi
+                </button>
+                <div class="network-list" id="network-list-box">
+                    <div style="padding: 12px; font-size: 12px; color: var(--text-muted); text-align: center;">Klik tombol pindai di atas...</div>
+                </div>
+            </div>
+
+            <div id="manual-method-area" style="display: none; margin-top: 10px;">
+                <div class="form-grid">
+                    <label>Target SSID</label>
+                    <input type="text" id="client-manual-ssid" placeholder="Ketik SSID presisi...">
+                </div>
+            </div>
+
+            <div class="form-grid" style="margin-top: 12px;">
+                <label>Kata Sandi Wi-Fi</label>
+                <input type="password" id="client-wpa-pass" placeholder="Ketik kata sandi WPA2...">
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="disconnectCurrentClient()" style="background-color:#fee2e2; color:#dc2626;">Putuskan Wi-Fi</button>
+            <button class="btn-cisco" onclick="connectClientToRouter()">Hubungkan</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const routerState = {
+        ip: "192.168.1.1", adminPass: "admin", ssid: "TKJ_NET_WIFI", securityMode: "WPA2-PSK",
+        wpaPass: "Password123", ssidBroadcast: true, clientIsolation: false
+    };
+
+    const clientsState = {
+        phone1: { name: "Smartphone-01", type: "phone", ip: "192.168.1.101", connected: false, ssid: "", pass: "" },
+        phone2: { name: "Smartphone-02", type: "phone", ip: "192.168.1.102", connected: false, ssid: "", pass: "" },
+        phone3: { name: "Smartphone-03", type: "phone", ip: "192.168.1.103", connected: false, ssid: "", pass: "" },
+        laptop1: { name: "Laptop-01", type: "laptop", ip: "192.168.1.104", connected: false, ssid: "", pass: "" },
+        laptop2: { name: "Laptop-02", type: "laptop", ip: "192.168.1.105", connected: false, ssid: "", pass: "" },
+        laptop3: { name: "Laptop-03", type: "laptop", ip: "192.168.1.106", connected: false, ssid: "", pass: "" }
+    };
+
+    document.getElementById('student-date').valueAsDate = new Date();
+
+    function renderConnections() {
+        const svg = document.getElementById('svg-connections');
+        const canvas = document.getElementById('canvas-area');
+        const routerNode = document.getElementById('router-node');
+        const canvasRect = canvas.getBoundingClientRect();
+        const routerRect = routerNode.getBoundingClientRect();
+
+        const routerCenter = {
+            x: routerRect.left - canvasRect.left + routerRect.width / 2,
+            y: routerRect.top - canvasRect.top + routerRect.height / 2
+        };
+
+        let svgHtml = '';
+
+        Object.keys(clientsState).forEach(clientId => {
+            const clientNode = document.getElementById(`${clientId}-node`);
+            const clientRect = clientNode.getBoundingClientRect();
+            const clientCenter = {
+                x: clientRect.left - canvasRect.left + clientRect.width / 2,
+                y: clientRect.top - canvasRect.top + clientRect.height / 2
+            };
+
+            const isConnected = clientsState[clientId].connected;
+            const lineClass = isConnected ? "wireless-line connected" : "wireless-line";
+
+            svgHtml += `<line class="${lineClass}" x1="${routerCenter.x}" y1="${routerCenter.y}" x2="${clientCenter.x}" y2="${clientCenter.y}" />`;
+            
+            const badge = document.getElementById(`${clientId}-badge`);
+            const statusLabel = document.getElementById(`${clientId}-status`);
+
+            if (isConnected) {
+                badge.className = "status-badge online";
+                badge.innerHTML = `<i class="fa-solid fa-check"></i>`;
+                statusLabel.innerText = `${routerState.ssid}`;
+                statusLabel.style.color = "var(--cisco-light-blue)";
+            } else {
+                badge.className = "status-badge";
+                badge.innerHTML = `!`;
+                statusLabel.innerText = "Terputus";
+                statusLabel.style.color = "var(--text-muted)";
+            }
+        });
+
+        svg.innerHTML = svgHtml;
+        checkLKPDTasksProgress();
+    }
+
+    window.addEventListener('resize', renderConnections);
+    setTimeout(renderConnections, 200);
+
+    function openRouterModal() {
+        document.getElementById('cfg-admin-pass').value = routerState.adminPass;
+        document.getElementById('cfg-ssid').value = routerState.ssid;
+        document.getElementById('cfg-sec-mode').value = routerState.securityMode;
+        document.getElementById('cfg-wpa-pass').value = routerState.wpaPass;
+
+        const broadcastRadios = document.getElementsByName('ssid-broadcast');
+        broadcastRadios[0].checked = routerState.ssidBroadcast;
+        broadcastRadios[1].checked = !routerState.ssidBroadcast;
+
+        const isolationRadios = document.getElementsByName('client-isolation');
+        isolationRadios[0].checked = !routerState.clientIsolation;
+        isolationRadios[1].checked = routerState.clientIsolation;
+
+        document.getElementById('router-modal').classList.add('active');
+    }
+
+    function saveRouterConfig() {
+        const oldSSID = routerState.ssid;
+        const oldPass = routerState.wpaPass;
+
+        routerState.adminPass = document.getElementById('cfg-admin-pass').value;
+        routerState.ssid = document.getElementById('cfg-ssid').value.trim() || "TKJ_NET_WIFI";
+        routerState.securityMode = document.getElementById('cfg-sec-mode').value;
+        routerState.wpaPass = document.getElementById('cfg-wpa-pass').value;
+
+        const broadcastVal = document.querySelector('input[name="ssid-broadcast"]:checked').value;
+        routerState.ssidBroadcast = (broadcastVal === 'enabled');
+
+        const isolationVal = document.querySelector('input[name="client-isolation"]:checked').value;
+        routerState.clientIsolation = (isolationVal === 'enabled');
+
+        document.getElementById('router-ssid-label').innerText = `SSID: ${routerState.ssid}`;
+
+        if (oldSSID !== routerState.ssid || oldPass !== routerState.wpaPass) {
+            Object.keys(clientsState).forEach(clientId => {
+                if (clientsState[clientId].connected) {
+                    if (clientsState[clientId].ssid !== routerState.ssid || clientsState[clientId].pass !== routerState.wpaPass) {
+                        clientsState[clientId].connected = false;
+                        logTerminal(`[DISCONNECT] ${clientsState[clientId].name} terputus (Perubahan kredensial).`, "fail");
+                    }
+                }
+            });
+        }
+
+        logTerminal(`[ROUTER] Konfigurasi diperbarui: SSID '${routerState.ssid}', Broadcast: ${routerState.ssidBroadcast}, AP Isolation: ${routerState.clientIsolation}`, "warning");
+        closeModal('router-modal');
+        renderConnections();
+    }
+
+    function openClientModal(clientId) {
+        document.getElementById('active-client-id').value = clientId;
+        document.getElementById('client-device-name').value = clientsState[clientId].name;
+        
+        document.getElementById('client-wpa-pass').value = clientsState[clientId].pass || "";
+        document.getElementById('network-list-box').innerHTML = `<div style="padding: 12px; font-size: 12px; color: var(--text-muted); text-align: center;">Klik tombol pindai di atas...</div>`;
+        
+        document.getElementById('client-modal').classList.add('active');
+    }
+
+    function toggleClientConnectMethod() {
+        const method = document.getElementById('client-connect-method').value;
+        if (method === 'scan') {
+            document.getElementById('scan-method-area').style.display = 'block';
+            document.getElementById('manual-method-area').style.display = 'none';
+        } else {
+            document.getElementById('scan-method-area').style.display = 'none';
+            document.getElementById('manual-method-area').style.display = 'block';
+        }
+    }
+
+    function scanAvailableNetworks() {
+        const listContainer = document.getElementById('network-list-box');
+        if (!routerState.ssidBroadcast) {
+            listContainer.innerHTML = `<div style="padding: 12px; font-size: 12px; color: var(--danger-color); text-align: center;"><i class="fa-solid fa-triangle-exclamation"></i> Tidak ada SSID yang terlihat (Hidden).</div>`;
+            return;
+        }
+        listContainer.innerHTML = `
+            <div class="network-item" onclick="selectScannedSSID('${routerState.ssid}')">
+                <span><i class="fa-solid fa-wifi" style="color:var(--cisco-light-blue);"></i> <strong>${routerState.ssid}</strong></span>
+                <span style="font-size:11px; color:var(--success-color);"><i class="fa-solid fa-signal"></i> Kuat</span>
+            </div>
+        `;
+    }
+
+    function selectScannedSSID(ssid) {
+        document.getElementById('client-manual-ssid').value = ssid;
+        logTerminal(`[SCAN] SSID '${ssid}' dipilih.`, "info");
+    }
+
+    function connectClientToRouter() {
+        const clientId = document.getElementById('active-client-id').value;
+        const method = document.getElementById('client-connect-method').value;
+        let targetSSID = method === 'scan' ? (routerState.ssidBroadcast ? routerState.ssid : "") : document.getElementById('client-manual-ssid').value.trim();
+        const inputPass = document.getElementById('client-wpa-pass').value;
+
+        if (targetSSID === routerState.ssid && inputPass === routerState.wpaPass) {
+            clientsState[clientId].connected = true;
+            clientsState[clientId].ssid = targetSSID;
+            clientsState[clientId].pass = inputPass;
+
+            logTerminal(`[AUTH SUCCESS] ${clientsState[clientId].name} terhubung ke '${targetSSID}'.`, "success");
+            closeModal('client-modal');
+            renderConnections();
+        } else {
+            logTerminal(`[AUTH FAILED] ${clientsState[clientId].name} gagal terhubung.`, "fail");
+            alert("Gagal Terhubung: SSID atau Kata Sandi salah!");
+        }
+    }
+
+    function disconnectCurrentClient() {
+        const clientId = document.getElementById('active-client-id').value;
+        clientsState[clientId].connected = false;
+        clientsState[clientId].ssid = "";
+        clientsState[clientId].pass = "";
+
+        logTerminal(`[DISCONNECT] ${clientsState[clientId].name} memutuskan koneksi.`, "fail");
+        closeModal('client-modal');
+        renderConnections();
+    }
+
+    function runPingTest() {
+        const srcId = document.getElementById('ping-source').value;
+        const targetType = document.getElementById('ping-target').value;
+        const srcClient = clientsState[srcId];
+
+        logTerminal(`\n> ping from ${srcClient.name} (${srcClient.ip})...`, "info");
+
+        if (!srcClient.connected) {
+            logTerminal(`PING ERROR: Perangkat sumber belum terhubung ke Wi-Fi!`, "fail");
+            return;
+        }
+
+        if (targetType === 'router') {
+            logTerminal(`Reply from 192.168.1.1: bytes=32 time=2ms TTL=64`, "success");
+            logTerminal(`[PING SUCCESS] Koneksi ke Gateway Normal.`, "success");
+        } else {
+            const dstClient = clientsState[targetType];
+
+            if (!dstClient.connected) {
+                logTerminal(`Request timed out. Tujuan offline.`, "fail");
+                return;
+            }
+
+            if (routerState.clientIsolation) {
+                logTerminal(`Request timed out.`, "fail");
+                logTerminal(`[BLOCKED] AP Isolation menolak lalu lintas inter-client!`, "warning");
+            } else {
+                logTerminal(`Reply from ${dstClient.ip}: bytes=32 time=4ms TTL=64`, "success");
+                logTerminal(`[PING SUCCESS] Koneksi antar-klien berhasil!`, "success");
+            }
+        }
+    }
+
+    function logTerminal(msg, type = "normal") {
+        const box = document.getElementById('terminal-output');
+        const div = document.createElement('div');
+        div.className = `terminal-line terminal-${type}`;
+        div.innerText = msg;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function clearTerminal() {
+        const box = document.getElementById('terminal-output');
+        box.innerHTML = '<div class="terminal-line">[SYSTEM] Terminal dibersihkan.</div>';
+    }
+
+    function checkLKPDTasksProgress() {
+        const t1 = routerState.adminPass !== 'admin' && routerState.adminPass.length >= 5;
+        document.getElementById('task1-chk').checked = t1;
+
+        const t2 = routerState.ssid === 'SMK_JUARA_NET' && routerState.securityMode === 'WPA2-PSK' && routerState.wpaPass.length >= 8;
+        document.getElementById('task2-chk').checked = t2;
+
+        const connectedCount = Object.values(clientsState).filter(c => c.connected).length;
+        const t3 = connectedCount === 6;
+        document.getElementById('task3-chk').checked = t3;
+
+        const t4 = routerState.clientIsolation === true;
+        document.getElementById('task4-chk').checked = t4;
+    }
+
+    function evaluateLKPD() {
+        const studentName = document.getElementById('student-name').value.trim();
+        if (!studentName) {
+            alert("Harap isi Nama Siswa terlebih dahulu!");
+            document.getElementById('student-name').focus();
+            return;
+        }
+
+        checkLKPDTasksProgress();
+
+        let score = 0;
+        if (document.getElementById('task1-chk').checked) score += 25;
+        if (document.getElementById('task2-chk').checked) score += 25;
+        
+        const connectedToNewSSID = Object.values(clientsState).filter(c => c.connected && c.ssid === 'SMK_JUARA_NET').length;
+        if (document.getElementById('task3-chk').checked && connectedToNewSSID === 6) {
+            score += 25;
+        } else {
+            document.getElementById('task3-chk').checked = false; 
+        }
+
+        if (document.getElementById('task4-chk').checked) score += 25;
+
+        document.getElementById('total-score').innerText = `${score} / 100`;
+
+        if (score === 100) {
+            alert(`Luar biasa ${studentName}! Anda telah berhasil mengonfigurasi jaringan dengan tepat.`);
+        } else {
+            alert(`Evaluasi Selesai. Nilai Anda: ${score}/100. Pastikan SSID menggunakan "SMK_JUARA_NET".`);
+        }
+    }
+
+    function switchTab(modalPrefix, tabId) {
+        document.querySelectorAll(`#${modalPrefix}-modal .tab-btn`).forEach(b => b.classList.remove('active'));
+        document.querySelectorAll(`#${modalPrefix}-modal .tab-content`).forEach(c => c.classList.remove('active'));
+
+        event.currentTarget.classList.add('active');
+        document.getElementById(`${modalPrefix}-${tabId}`).classList.add('active');
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+    }
+</script>
+
+</body>
+</html>
