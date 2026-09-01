@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UTP Network & Troubleshooting Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* LED Indicator Styling */
+        .led-off { background-color: #e2e8f0; border: 1px solid #cbd5e1; box-shadow: none; }
+        .led-on-green { background-color: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.6); }
+        .led-on-red { background-color: #f43f5e; box-shadow: 0 0 12px rgba(244, 63, 94, 0.6); }
+
+        /* Wire Colors Gradient & Contrast */
+        .wire-WO { background: repeating-linear-gradient(45deg, #ea580c, #ea580c 6px, #f1f5f9 6px, #f1f5f9 12px); border: 1px solid #cbd5e1; }
+        .wire-O  { background-color: #ea580c; border: 1px solid #ea580c; }
+        .wire-WG { background: repeating-linear-gradient(45deg, #10b981, #10b981 6px, #f1f5f9 6px, #f1f5f9 12px); border: 1px solid #cbd5e1; }
+        .wire-BL { background-color: #2563eb; border: 1px solid #2563eb; }
+        .wire-WBL{ background: repeating-linear-gradient(45deg, #2563eb, #2563eb 6px, #f1f5f9 6px, #f1f5f9 12px); border: 1px solid #cbd5e1; }
+        .wire-G  { background-color: #059669; border: 1px solid #059669; }
+        .wire-WBR{ background: repeating-linear-gradient(45deg, #78350f, #78350f 6px, #f1f5f9 6px, #f1f5f9 12px); border: 1px solid #cbd5e1; }
+        .wire-BR { background-color: #78350f; border: 1px solid #78350f; }
+        .wire-NONE { background-color: #94a3b8; border: 1px dashed #64748b; }
+
+        .terminal-scroll::-webkit-scrollbar { width: 6px; }
+        .terminal-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+
+    <!-- HEADER & NAVIGATION -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-network-wired text-sm"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base tracking-tight text-slate-900">UTP Network Lab</h1>
+                    <p class="text-[10px] uppercase tracking-widest text-indigo-600 font-semibold">Interactive Troubleshooting Lab</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <nav class="flex gap-1.5 p-1 bg-slate-100/80 rounded-xl border border-slate-200/60 text-xs font-medium">
+                    <button onclick="switchTab('mod-ref')" id="nav-ref" class="tab-btn px-4 py-2 rounded-lg bg-white text-slate-900 shadow-sm font-semibold transition">
+                        1. Reference
+                    </button>
+                    <button onclick="switchTab('mod-trouble')" id="nav-trouble" class="tab-btn px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 transition font-medium">
+                        2. Troubleshooting
+                    </button>
+                </nav>
+
+                <div class="h-6 w-[1px] bg-slate-200 mx-1"></div>
+
+                <button onclick="openModal('modal-pinout')" class="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-wrench text-amber-500"></i> Pinout Matrix
+                </button>
+                <button onclick="openModal('modal-tester')" class="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-vial text-indigo-500"></i> LAN Tester & CLI
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+        <!-- BAGIAN 1: REFERENCE -->
+        <section id="mod-ref" class="tab-content space-y-6">
+            <div class="glass-card rounded-2xl p-6 shadow-sm">
+                <div class="flex flex-wrap justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900 tracking-tight">Bagian 1: Reference (Interactive Cable Inspector)</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Arahkan kursor (hover) pada kawat kabel untuk mempelajari alokasi sinyal TX/RX & Power.</p>
+                    </div>
+                    <div class="flex gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                        <button onclick="setReferenceStandard('568B')" id="btn-ref-568b" class="px-3.5 py-1.5 rounded-lg bg-white text-slate-900 font-semibold text-xs shadow-sm">TIA-568B</button>
+                        <button onclick="setReferenceStandard('568A')" id="btn-ref-568a" class="px-3.5 py-1.5 rounded-lg text-slate-600 text-xs font-medium hover:text-slate-900">TIA-568A</button>
+                    </div>
+                </div>
+
+                <div class="grid lg:grid-cols-12 gap-6 items-center">
+                    <div class="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400" id="ref-title">RJ-45 Pinout Standard</h3>
+                            <span class="text-[11px] font-mono bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded-md font-medium">8-Pin Modular Jack</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-8 gap-2.5 mb-6" id="reference-wires"></div>
+
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 min-h-[90px] flex items-center" id="wire-info-box">
+                            <p class="text-slate-400 text-xs italic flex items-center gap-2">
+                                <i class="fa-solid fa-arrow-pointer text-indigo-500"></i> Hover pada salah satu kawat pin di atas untuk melihat spesifikasi detail.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-5 space-y-4">
+                        <div class="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+                            <div class="flex items-center gap-2.5 mb-1.5">
+                                <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                                </div>
+                                <h4 class="font-bold text-slate-900 text-xs">Straight-Through Wiring</h4>
+                            </div>
+                            <p class="text-xs text-slate-500 leading-relaxed">Kedua ujung kabel menggunakan standar identik (568B-568B atau 568A-568A). Digunakan untuk komunikasi antar perangkat yang berbeda jenis (PC ↔ Switch / Router ↔ Switch).</p>
+                        </div>
+
+                        <div class="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+                            <div class="flex items-center gap-2.5 mb-1.5">
+                                <div class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-route"></i>
+                                </div>
+                                <h4 class="font-bold text-slate-900 text-xs">Crossover Wiring</h4>
+                            </div>
+                            <p class="text-xs text-slate-500 leading-relaxed">Ujung A dipasang 568A dan Ujung B dipasang 568B. Pin TX (1,2) langsung menyambung ke RX (3,6) perangkat lawan. Digunakan untuk koneksi langsung perangkat sejenis (PC ↔ PC).</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BAGIAN 2: TROUBLESHOOTING & CHECKLIST -->
+        <section id="mod-trouble" class="tab-content hidden space-y-6">
+
+            <!-- LAB TROUBLESHOOTING PANEL -->
+            <div class="glass-card rounded-2xl p-6 shadow-sm">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-6 pb-4 border-b border-slate-200/80">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                            <i class="fa-solid fa-microscope text-indigo-600"></i> Bagian 2: Lab Troubleshooting (10 Skenario Kasus)
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Analisis kondisi kabel pada tiap kasus, perbaiki urutan pinout via pop-up, lalu verifikasi laporan diagnostik.</p>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                        <div>
+                            <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Diagnostic Time</div>
+                            <div id="challenge-timer" class="text-base font-mono font-bold text-indigo-600">00:00</div>
+                        </div>
+                        <div class="h-7 w-[1px] bg-slate-200"></div>
+                        <div>
+                            <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Score Accumulation</div>
+                            <div id="challenge-score" class="text-base font-mono font-bold text-emerald-600">0 PTS</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">Pilih Skenario Kasus (1 - 10):</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="case-selector-buttons"></div>
+                </div>
+
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-5 mb-6 shadow-sm">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-slate-900 text-sm" id="case-title">Case Loading...</h3>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100" id="case-target-standard">Target: Standard 568B</span>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-4 leading-relaxed" id="case-description">Deskripsi skenario masalah akan tampil di sini.</p>
+                    
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <button onclick="openModal('modal-tester')" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl border border-indigo-200 transition flex items-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-vial text-indigo-600"></i> Uji LAN Tester & CLI (Pop-up)
+                        </button>
+                        <button onclick="openModal('modal-pinout')" class="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 font-semibold rounded-xl border border-amber-200 transition flex items-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-wrench text-amber-600"></i> Perbaiki Pinout Matrix (Pop-up)
+                        </button>
+                        <button onclick="verifyFix()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-md transition flex items-center gap-2 ml-auto">
+                            <i class="fa-solid fa-check"></i> Submit Diagnostic Fix
+                        </button>
+                    </div>
+                </div>
+
+                <!-- DIAGNOSTIC REPORT RESULT -->
+                <div id="diagnostic-report" class="bg-white border border-slate-200/80 rounded-2xl p-5 hidden shadow-sm">
+                    <h3 class="font-bold text-slate-900 text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-file-lines text-indigo-600"></i> Ringkasan Analisis OSI Layer
+                    </h3>
+                    <div class="grid md:grid-cols-3 gap-3 text-xs">
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/60">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">PHYSICAL LAYER (Layer 1)</div>
+                            <div id="report-l1" class="font-medium text-slate-700">-</div>
+                        </div>
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/60">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">DATA LINK / MDIX (Layer 2)</div>
+                            <div id="report-l2" class="font-medium text-slate-700">-</div>
+                        </div>
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/60">
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">NETWORK LATENCY (Layer 3)</div>
+                            <div id="report-l3" class="font-medium text-slate-700">-</div>
+                        </div>
+                    </div>
+                    <div id="report-verdict" class="mt-4 p-3 rounded-xl text-center text-xs font-bold"></div>
+                </div>
+
+            </div>
+
+            <!-- KARTU CHECKLIST PANDUAN SISWA & SKOR AKUMULASI -->
+            <div class="glass-card rounded-2xl p-6 shadow-sm">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4 pb-4 border-b border-slate-200">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-indigo-600"></i> Panduan & Checklist Progress Troubleshooting
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">Kasus akan tercentang otomatis setelah Anda berhasil menyelesaikan diagnosis.</p>
+                    </div>
+                    
+                    <!-- Total Score & Progress Bar -->
+                    <div class="w-full sm:w-auto flex items-center gap-4 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-sm">
+                        <div>
+                            <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Skor Siswa</div>
+                            <div id="checklist-total-score" class="text-lg font-mono font-bold text-emerald-400">0 / 100 PTS</div>
+                        </div>
+                        <div class="w-24 bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700">
+                            <div id="score-progress-bar" class="bg-emerald-500 h-full w-0 transition-all duration-500"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid 10 Items Checklist -->
+                <div class="grid md:grid-cols-2 gap-3" id="trouble-checklist-container">
+                    <!-- Checklist items will be populated by JS -->
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- POP-UP 1: PINOUT MATRIX SIMULATOR (MODAL) -->
+    <div id="modal-pinout" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-150">
+            
+            <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center text-xs shadow-sm">
+                        <i class="fa-solid fa-wrench"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-sm">Simulator Crimping Matrix</h3>
+                        <p class="text-[11px] text-slate-500">Atur susunan pin Master & Remote untuk perbaikan</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="presetCrimping('568B', '568B')" class="px-3 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-[11px] rounded-lg font-medium text-slate-700 shadow-sm">Preset Straight (568B)</button>
+                    <button onclick="presetCrimping('568A', '568B')" class="px-3 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-[11px] rounded-lg font-medium text-slate-700 shadow-sm">Preset Crossover</button>
+                    <button onclick="closeModal('modal-pinout')" class="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center transition ml-2">
+                        <i class="fa-solid fa-xmark text-base"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6 overflow-y-auto flex-1 space-y-4">
+                <div class="grid lg:grid-cols-2 gap-6">
+                    <div class="bg-slate-50/50 p-4 rounded-xl border border-slate-200/80">
+                        <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
+                            <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">Ujung Master (Side A)</span>
+                            <span class="text-[10px] font-mono bg-slate-200 text-slate-700 px-2 py-0.5 rounded">Tx / Rx Main</span>
+                        </div>
+                        <div class="space-y-2" id="master-pin-selectors"></div>
+                    </div>
+
+                    <div class="bg-slate-50/50 p-4 rounded-xl border border-slate-200/80">
+                        <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
+                            <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">Ujung Remote (Side B)</span>
+                            <span class="text-[10px] font-mono bg-slate-200 text-slate-700 px-2 py-0.5 rounded">Target Load</span>
+                        </div>
+                        <div class="space-y-2" id="remote-pin-selectors"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="closeModal('modal-pinout')" class="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl shadow-sm transition">
+                    Selesai & Simpan Matrix
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- POP-UP 2: UJI LAN TESTER & CLI (MODAL) -->
+    <div id="modal-tester" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-150">
+            
+            <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs shadow-sm">
+                        <i class="fa-solid fa-microchip"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-sm">Pengujian Hardware LAN Tester & CLI Simulator</h3>
+                        <p class="text-[11px] text-slate-500">Uji sinyal listrik fisik dan pengujian konektivitas logikal ping</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-tester')" class="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto flex-1">
+                <div class="grid lg:grid-cols-12 gap-6">
+                    
+                    <!-- LAN TESTER HARDWARE PANEL -->
+                    <div class="lg:col-span-5 bg-slate-50 p-5 rounded-2xl border border-slate-200 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="font-bold text-slate-900 text-xs flex items-center gap-2">
+                                    <i class="fa-solid fa-microchip text-indigo-600"></i> Hardware LAN Tester
+                                </h4>
+                                <span id="tester-status-badge" class="px-2.5 py-0.5 text-[10px] font-bold tracking-wide rounded-full bg-slate-200 text-slate-600">STANDBY</span>
+                            </div>
+
+                            <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-inner grid grid-cols-2 gap-4 mb-4">
+                                <div class="text-center">
+                                    <div class="text-[10px] font-mono font-bold text-slate-400 mb-2 tracking-widest">MASTER</div>
+                                    <div class="space-y-2 flex flex-col items-center" id="master-leds"></div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-[10px] font-mono font-bold text-slate-400 mb-2 tracking-widest">REMOTE</div>
+                                    <div class="space-y-2 flex flex-col items-center" id="remote-leds"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2.5">
+                            <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+                                <span class="text-xs font-semibold text-slate-700">Kecepatan Sinyal</span>
+                                <div class="flex gap-1">
+                                    <button onclick="setSpeed(1000)" id="speed-slow" class="px-2.5 py-1 bg-slate-900 text-white text-[11px] rounded-lg font-semibold shadow-sm">Slow</button>
+                                    <button onclick="setSpeed(400)" id="speed-fast" class="px-2.5 py-1 bg-slate-100 text-slate-600 text-[11px] rounded-lg font-medium hover:bg-slate-200">Fast</button>
+                                </div>
+                            </div>
+                            <button onclick="toggleLanTester()" id="btn-tester-power" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs tracking-wider transition shadow-md flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-power-off"></i> POWER ON TESTER
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CLI TERMINAL PANEL -->
+                    <div class="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200 flex flex-col shadow-sm">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-bold text-slate-900 text-xs flex items-center gap-2">
+                                <i class="fa-solid fa-terminal text-slate-700"></i> Terminal CLI Simulator
+                            </h4>
+                            
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-medium text-slate-600">Auto-MDIX:</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="toggle-automdix" class="sr-only peer">
+                                    <div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="cli-screen" class="flex-1 bg-slate-950 rounded-xl p-4 font-mono text-xs text-emerald-400 border border-slate-800 min-h-[240px] max-h-[280px] overflow-y-auto terminal-scroll space-y-1 mb-3 shadow-inner">
+                            <div class="text-slate-500">Microsoft Windows [Version 10.0.19045.3693]</div>
+                            <div class="text-slate-500">(c) Microsoft Corporation. All rights reserved.</div>
+                            <br>
+                            <div>Ketik <span class="text-yellow-400">ping 192.168.1.1</span> atau <span class="text-yellow-400">ping -l 1000 192.168.1.1</span> untuk menguji konektivitas logikal.</div>
+                            <br>
+                        </div>
+
+                        <form onsubmit="handleCliCommand(event)" class="flex gap-2">
+                            <div class="flex-1 flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200 transition shadow-sm">
+                                <span class="text-slate-400 font-mono text-xs mr-2">C:\&gt;</span>
+                                <input type="text" id="cli-input" placeholder="ping 192.168.1.1" class="w-full bg-transparent text-xs text-slate-900 font-mono focus:outline-none" autocomplete="off">
+                            </div>
+                            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition shadow-sm">Execute</button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button onclick="closeModal('modal-tester')" class="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl shadow-sm transition">
+                    Tutup Pengujian
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- JAVASCRIPT INTEGRATED -->
+    <script>
+        // --- DATA CEKLIS TROUBLESHOOTING & BOBOT POIN ---
+        const CHECKLIST_DATA = [
+            { id: 1, title: "Case 1: Straight 568B - Pin 3 Putus", points: 5, diff: "Sangat Mudah", badgeColor: "bg-slate-100 text-slate-700" },
+            { id: 2, title: "Case 2: Reversed Pair (3 ↔ 6)", points: 8, diff: "Mudah", badgeColor: "bg-blue-50 text-blue-700" },
+            { id: 3, title: "Case 3: Mismatch Standard (A ke B)", points: 5, diff: "Sangat Mudah", badgeColor: "bg-slate-100 text-slate-700" },
+            { id: 4, title: "Case 4: Crossover Dibuat Straight", points: 7, diff: "Mudah", badgeColor: "bg-blue-50 text-blue-700" },
+            { id: 5, title: "Case 5: Inverted Pair (4 ↔ 5)", points: 8, diff: "Mudah", badgeColor: "bg-blue-50 text-blue-700" },
+            { id: 6, title: "Case 6: Cross + Grounding Putus (7-8)", points: 12, diff: "Sedang", badgeColor: "bg-amber-50 text-amber-700" },
+            { id: 7, title: "Case 7: TX Pair Reversed (1 ↔ 2)", points: 10, diff: "Sedang", badgeColor: "bg-amber-50 text-amber-700" },
+            { id: 8, title: "Case 8: Total TX Open (1 & 2 Putus)", points: 10, diff: "Sedang", badgeColor: "bg-amber-50 text-amber-700" },
+            { id: 9, title: "Case 9: Short Circuit (Pin 1 & 2 Korslet)", points: 15, diff: "Sulit", badgeColor: "bg-rose-50 text-rose-700" },
+            { id: 10, title: "Case 10: Split Pair Non-Standar", points: 20, diff: "Sangat Sulit", badgeColor: "bg-purple-50 text-purple-700" }
+        ];
+
+        let completedCases = new Set();
+
+        // --- CONSTANTS & DATA ---
+        const WIRE_TYPES = {
+            'WO':  { name: 'Putih-Oranye', colorClass: 'wire-WO' },
+            'O':   { name: 'Oranye',       colorClass: 'wire-O' },
+            'WG':  { name: 'Putih-Hijau',  colorClass: 'wire-WG' },
+            'BL':  { name: 'Biru',         colorClass: 'wire-BL' },
+            'WBL': { name: 'Putih-Biru',   colorClass: 'wire-WBL' },
+            'G':   { name: 'Hijau',        colorClass: 'wire-G' },
+            'WBR': { name: 'Putih-Cokelat',colorClass: 'wire-WBR' },
+            'BR':  { name: 'Cokelat',      colorClass: 'wire-BR' },
+            'NONE':{ name: 'Putus / Open', colorClass: 'wire-NONE' }
+        };
+
+        const STD_568B = ['WO', 'O', 'WG', 'BL', 'WBL', 'G', 'WBR', 'BR'];
+        const STD_568A = ['WG', 'G', 'WO', 'BL', 'WBL', 'O', 'WBR', 'BR'];
+
+        const PIN_ROLES = {
+            1: 'Transmit Data + (TX+)',
+            2: 'Transmit Data - (TX-)',
+            3: 'Receive Data + (RX+)',
+            4: 'Power / Reserved (PoE)',
+            5: 'Power / Reserved (PoE)',
+            6: 'Receive Data - (RX-)',
+            7: 'Power / Ground (PoE)',
+            8: 'Power / Ground (PoE)'
+        };
+
+        const TROUBLESHOOTING_CASES = [
+            {
+                id: 1,
+                name: "Case 1: Straight 568B - Pin 3 Putus",
+                target: "Straight 568B",
+                desc: "Koneksi terputus. Sinyal pengujian fisik menunjukkan jalur 3 (RX+) tidak menghantarkan listrik.",
+                master: [...STD_568B],
+                remote: ['WO', 'O', 'NONE', 'BL', 'WBL', 'G', 'WBR', 'BR'],
+                solutionRemote: [...STD_568B]
+            },
+            {
+                id: 2,
+                name: "Case 2: Reversed Pair (3 ↔ 6)",
+                target: "Straight 568B",
+                desc: "Paket data gagal terkirim. Pasangan kabel penerima (RX) terbalik antara pin 3 dan 6 pada Ujung Remote.",
+                master: [...STD_568B],
+                remote: ['WO', 'O', 'G', 'BL', 'WBL', 'WG', 'WBR', 'BR'],
+                solutionRemote: [...STD_568B]
+            },
+            {
+                id: 3,
+                name: "Case 3: Mismatch Standard (A ke B)",
+                target: "Straight 568A",
+                desc: "Master diset TIA-568A, namun Remote terpasang TIA-568B. Ubah Ujung B agar seragam menggunakan standar 568A.",
+                master: [...STD_568A],
+                remote: [...STD_568B],
+                solutionRemote: [...STD_568A]
+            },
+            {
+                id: 4,
+                name: "Case 4: Crossover Dibuat Straight",
+                target: "Crossover (568A ke 568B)",
+                desc: "Dibutuhkan jalur Crossover langsung antar PC tanpa fitur Auto-MDIX, namun kabel dibuat Straight.",
+                master: [...STD_568A],
+                remote: [...STD_568B],
+                solutionRemote: [...STD_568B]
+            },
+            {
+                id: 5,
+                name: "Case 5: Inverted Pair (4 ↔ 5)",
+                target: "Straight 568B",
+                desc: "Jaringan beroperasi, namun kabel telepon/aux terbalik pada pin 4 & 5 (Reverse Polarity).",
+                master: [...STD_568B],
+                remote: ['WO', 'O', 'WG', 'WBL', 'BL', 'G', 'WBR', 'BR'],
+                solutionRemote: [...STD_568B]
+            },
+            {
+                id: 6,
+                name: "Case 6: Cross + Grounding Putus (7-8)",
+                target: "Crossover (568A ke 568B)",
+                desc: "Fast Ethernet (100Mbps) lancar, namun koneksi Gigabit (1000Mbps) gagal karena Pin 7 & 8 terputus di Remote.",
+                master: [...STD_568A],
+                remote: ['WO', 'O', 'WG', 'BL', 'WBL', 'G', 'NONE', 'NONE'],
+                solutionRemote: [...STD_568B]
+            },
+            {
+                id: 7,
+                name: "Case 7: TX Pair Reversed (1 ↔ 2)",
+                target: "Straight 568B",
+                desc: "Pasangan transmisi terbalik pada Ujung Remote (Pin 1 dan Pin 2 tertukar).",
+                master: [...STD_568B],
+                remote: ['O', 'WO', 'WG', 'BL', 'WBL', 'G', 'WBR', 'BR'],
+                solutionRemote: [...STD_568B]
+            },
+            {
+                id: 8,
+                name: "Case 8: Total TX Open (1 & 2 Putus)",
+                target: "Straight 568A",
+                desc: "Sinyal pemancar terputus total karena kawat 1 & 2 terlepas di konektor Ujung Remote.",
+                master: [...STD_568A],
+                remote: ['NONE', 'NONE', 'WO', 'BL', 'WBL', 'O', 'WBR', 'BR'],
+                solutionRemote: [...STD_568A]
+            },
+            {
+                id: 9,
+                name: "Case 9: Short Circuit (Pin 1 & 2 Korslet)",
+                target: "Crossover",
+                desc: "Pin 1 dan Pin 2 pada konektor Remote saling menyentuh sehingga menyebabkan korsleting listrik.",
+                master: [...STD_568A],
+                remote: ['WO', 'WO', 'WG', 'BL', 'WBL', 'G', 'WBR', 'BR'],
+                solutionRemote: [...STD_568B]
+            },
+            {
+                id: 10,
+                name: "Case 10: Split Pair Non-Standar",
+                target: "Straight 568B",
+                desc: "Urutan pin 1-to-1 lurus tetapi tidak mematuhi pasangan lilitan standar. Terjadi Crosstalk & Packet Loss tinggi.",
+                master: ['WO', 'O', 'BL', 'WBL', 'WG', 'G', 'WBR', 'BR'],
+                remote: ['WO', 'O', 'BL', 'WBL', 'WG', 'G', 'WBR', 'BR'],
+                solutionRemote: [...STD_568B]
+            }
+        ];
+
+        // --- GLOBAL APP STATE ---
+        let currentMasterPinout = [...STD_568B];
+        let currentRemotePinout = [...STD_568B];
+
+        let isTesterRunning = false;
+        let testerInterval = null;
+        let currentStep = 0;
+        let testerSpeed = 1000;
+
+        let activeCaseId = 1;
+        let timerSeconds = 0;
+        let timerInterval = null;
+
+        // --- RENDER CHECKLIST UI (READ-ONLY / OTOMATIS) ---
+        function renderChecklistUI() {
+            const container = document.getElementById('trouble-checklist-container');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            CHECKLIST_DATA.forEach(item => {
+                const isChecked = completedCases.has(item.id);
+                
+                const card = document.createElement('div');
+                card.className = `flex items-center justify-between p-3 rounded-xl border transition select-none ${
+                    isChecked 
+                        ? 'bg-emerald-50/60 border-emerald-300 shadow-sm' 
+                        : 'bg-white border-slate-200/80 opacity-80'
+                }`;
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" 
+                               disabled 
+                               ${isChecked ? 'checked' : ''} 
+                               class="w-4 h-4 text-emerald-600 rounded border-slate-300 cursor-not-allowed">
+                        <div>
+                            <div class="text-xs font-bold ${isChecked ? 'text-emerald-900 line-through opacity-80' : 'text-slate-800'}">
+                                ${item.title}
+                            </div>
+                            <span class="text-[10px] px-2 py-0.5 rounded-md font-semibold ${item.badgeColor}">
+                                Tingkat: ${item.diff}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="font-mono text-xs font-bold ${isChecked ? 'text-emerald-600' : 'text-slate-500'}">
+                        +${item.points} PTS
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            updateScoreSummary();
+        }
+
+        // Update Perhitungan Total Skor & Progress Bar
+        function updateScoreSummary() {
+            let totalScore = 0;
+            completedCases.forEach(id => {
+                const item = CHECKLIST_DATA.find(c => c.id === id);
+                if (item) totalScore += item.points;
+            });
+
+            const totalDisplay = document.getElementById('checklist-total-score');
+            const progressBar = document.getElementById('score-progress-bar');
+            const globalScoreBadge = document.getElementById('challenge-score');
+
+            if (totalDisplay) totalDisplay.innerText = `${totalScore} / 100 PTS`;
+            if (globalScoreBadge) globalScoreBadge.innerText = `${totalScore} PTS`;
+            if (progressBar) progressBar.style.width = `${totalScore}%`;
+        }
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderReference('568B');
+            renderPinoutSelectors();
+            renderTesterLeds();
+            renderCaseButtons();
+            renderChecklistUI();
+            loadCase(1);
+        });
+
+        // --- MAIN TAB SWITCHER ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            
+            document.getElementById('nav-ref').className = 'tab-btn px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 transition font-medium';
+            document.getElementById('nav-trouble').className = 'tab-btn px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 transition font-medium';
+
+            document.getElementById(tabId).classList.remove('hidden');
+
+            if (tabId === 'mod-ref') {
+                document.getElementById('nav-ref').className = 'tab-btn px-4 py-2 rounded-lg bg-white text-slate-900 shadow-sm font-semibold transition';
+            } else {
+                document.getElementById('nav-trouble').className = 'tab-btn px-4 py-2 rounded-lg bg-white text-slate-900 shadow-sm font-semibold transition';
+            }
+        }
+
+        // --- POP-UP MODAL CONTROLLERS ---
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        window.onclick = function(event) {
+            const modalPinout = document.getElementById('modal-pinout');
+            const modalTester = document.getElementById('modal-tester');
+            if (event.target === modalPinout) closeModal('modal-pinout');
+            if (event.target === modalTester) closeModal('modal-tester');
+        };
+
+        // --- BAGIAN 1: REFERENCE LOGIC ---
+        function renderReference(type) {
+            const container = document.getElementById('reference-wires');
+            const title = document.getElementById('ref-title');
+            const list = type === '568B' ? STD_568B : STD_568A;
+            
+            title.innerText = `Standard TIA/EIA-${type}`;
+            container.innerHTML = '';
+
+            list.forEach((wireKey, idx) => {
+                const pinNum = idx + 1;
+                const wire = WIRE_TYPES[wireKey];
+                const wireEl = document.createElement('div');
+                wireEl.className = `h-20 rounded-xl ${wire.colorClass} flex flex-col justify-between items-center py-2 cursor-pointer transition transform hover:-translate-y-1 shadow-sm`;
+                wireEl.innerHTML = `<span class="bg-white/90 text-slate-900 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shadow-sm border border-slate-200">${pinNum}</span>`;
+                
+                wireEl.addEventListener('mouseenter', () => {
+                    document.getElementById('wire-info-box').innerHTML = `
+                        <div class="space-y-0.5">
+                            <div class="text-xs font-bold text-slate-900">Pin ${pinNum}: ${wire.name}</div>
+                            <div class="text-xs font-medium text-indigo-600">Alokasi: ${PIN_ROLES[pinNum]}</div>
+                            <div class="text-[11px] text-slate-500">Konfigurasi standar TIA/EIA-${type} untuk penghantaran sinyal terisolasi.</div>
+                        </div>
+                    `;
+                });
+                container.appendChild(wireEl);
+            });
+        }
+
+        function setReferenceStandard(type) {
+            document.getElementById('btn-ref-568b').className = type === '568B' ? 'px-3.5 py-1.5 rounded-lg bg-white text-slate-900 font-semibold text-xs shadow-sm' : 'px-3.5 py-1.5 rounded-lg text-slate-600 text-xs font-medium hover:text-slate-900';
+            document.getElementById('btn-ref-568a').className = type === '568A' ? 'px-3.5 py-1.5 rounded-lg bg-white text-slate-900 font-semibold text-xs shadow-sm' : 'px-3.5 py-1.5 rounded-lg text-slate-600 text-xs font-medium hover:text-slate-900';
+            renderReference(type);
+        }
+
+        // --- PINOUT MATRIX LOGIC ---
+        function renderPinoutSelectors() {
+            const masterContainer = document.getElementById('master-pin-selectors');
+            const remoteContainer = document.getElementById('remote-pin-selectors');
+
+            masterContainer.innerHTML = '';
+            remoteContainer.innerHTML = '';
+
+            for (let i = 0; i < 8; i++) {
+                masterContainer.appendChild(createPinSelectRow(i, 'master'));
+                remoteContainer.appendChild(createPinSelectRow(i, 'remote'));
+            }
+        }
+
+        function createPinSelectRow(index, side) {
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2.5 bg-white p-2 rounded-xl border border-slate-200 shadow-sm';
+            
+            const currentArray = side === 'master' ? currentMasterPinout : currentRemotePinout;
+            const currentWireKey = currentArray[index];
+
+            row.innerHTML = `
+                <span class="text-xs font-mono font-bold w-7 text-slate-500">P${index + 1}</span>
+                <div class="w-4 h-4 rounded-md ${WIRE_TYPES[currentWireKey].colorClass} shadow-sm"></div>
+                <select onchange="updatePinout('${side}', ${index}, this.value)" class="flex-1 bg-slate-50 text-xs text-slate-800 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500 font-medium">
+                    ${Object.keys(WIRE_TYPES).map(key => `
+                        <option value="${key}" ${key === currentWireKey ? 'selected' : ''}>${WIRE_TYPES[key].name}</option>
+                    `).join('')}
+                </select>
+            `;
+            return row;
+        }
+
+        function updatePinout(side, index, value) {
+            if (side === 'master') {
+                currentMasterPinout[index] = value;
+            } else {
+                currentRemotePinout[index] = value;
+            }
+            renderPinoutSelectors();
+            if (isTesterRunning) restartLANSweep();
+        }
+
+        function presetCrimping(masterType, remoteType) {
+            currentMasterPinout = masterType === '568B' ? [...STD_568B] : [...STD_568A];
+            currentRemotePinout = remoteType === '568B' ? [...STD_568B] : [...STD_568A];
+            renderPinoutSelectors();
+            if (isTesterRunning) restartLANSweep();
+        }
+
+        // --- LAN TESTER LOGIC ---
+        function renderTesterLeds() {
+            const mContainer = document.getElementById('master-leds');
+            const rContainer = document.getElementById('remote-leds');
+
+            mContainer.innerHTML = '';
+            rContainer.innerHTML = '';
+
+            for (let i = 1; i <= 8; i++) {
+                mContainer.innerHTML += `
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-mono text-slate-400 w-3">${i}</span>
+                        <div id="m-led-${i}" class="w-3.5 h-3.5 rounded-full led-off"></div>
+                    </div>
+                `;
+                rContainer.innerHTML += `
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-mono text-slate-400 w-3">${i}</span>
+                        <div id="r-led-${i}" class="w-3.5 h-3.5 rounded-full led-off"></div>
+                    </div>
+                `;
+            }
+        }
+
+        function setSpeed(speedMs) {
+            testerSpeed = speedMs;
+            document.getElementById('speed-slow').className = speedMs === 1000 ? 'px-2.5 py-1 bg-slate-900 text-white text-[11px] rounded-lg font-semibold shadow-sm' : 'px-2.5 py-1 bg-slate-100 text-slate-600 text-[11px] rounded-lg font-medium hover:bg-slate-200';
+            document.getElementById('speed-fast').className = speedMs === 400 ? 'px-2.5 py-1 bg-slate-900 text-white text-[11px] rounded-lg font-semibold shadow-sm' : 'px-2.5 py-1 bg-slate-100 text-slate-600 text-[11px] rounded-lg font-medium hover:bg-slate-200';
+            if (isTesterRunning) restartLANSweep();
+        }
+
+        function toggleLanTester() {
+            isTesterRunning = !isTesterRunning;
+            const btn = document.getElementById('btn-tester-power');
+            const badge = document.getElementById('tester-status-badge');
+
+            if (isTesterRunning) {
+                btn.className = 'w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs tracking-wider transition shadow-md flex items-center justify-center gap-2';
+                btn.innerHTML = '<i class="fa-solid fa-power-off"></i> POWER OFF TESTER';
+                badge.className = 'px-2.5 py-0.5 text-[10px] font-bold tracking-wide rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200';
+                badge.innerText = 'SWEEPING ACTIVE';
+                startLANSweep();
+            } else {
+                btn.className = 'w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs tracking-wider transition shadow-md flex items-center justify-center gap-2';
+                btn.innerHTML = '<i class="fa-solid fa-power-off"></i> POWER ON TESTER';
+                badge.className = 'px-2.5 py-0.5 text-[10px] font-bold tracking-wide rounded-full bg-slate-200 text-slate-600';
+                badge.innerText = 'STANDBY';
+                stopLANSweep();
+            }
+        }
+
+        function startLANSweep() {
+            currentStep = 0;
+            testerInterval = setInterval(runSweepStep, testerSpeed);
+        }
+
+        function stopLANSweep() {
+            clearInterval(testerInterval);
+            for (let i = 1; i <= 8; i++) {
+                setLedState('m', i, 'off');
+                setLedState('r', i, 'off');
+            }
+        }
+
+        function restartLANSweep() {
+            stopLANSweep();
+            startLANSweep();
+        }
+
+        function runSweepStep() {
+            for (let i = 1; i <= 8; i++) {
+                setLedState('m', i, 'off');
+                setLedState('r', i, 'off');
+            }
+
+            const masterPinIdx = currentStep;
+            const pinNum = masterPinIdx + 1;
+            const masterWire = currentMasterPinout[masterPinIdx];
+
+            setLedState('m', pinNum, 'green');
+
+            if (masterWire !== 'NONE') {
+                const matchingRemotePins = [];
+                currentRemotePinout.forEach((rWire, rIdx) => {
+                    if (rWire === masterWire && rWire !== 'NONE') {
+                        matchingRemotePins.push(rIdx + 1);
+                    }
+                });
+
+                if (matchingRemotePins.length > 1) {
+                    matchingRemotePins.forEach(rPin => setLedState('r', rPin, 'red'));
+                } else if (matchingRemotePins.length === 1) {
+                    const rPin = matchingRemotePins[0];
+                    setLedState('r', rPin, 'green');
+                }
+            }
+
+            currentStep = (currentStep + 1) % 8;
+        }
+
+        function setLedState(side, pin, state) {
+            const led = document.getElementById(`${side}-led-${pin}`);
+            if (!led) return;
+            led.className = `w-3.5 h-3.5 rounded-full led-${state === 'off' ? 'off' : 'on-' + state}`;
+        }
+
+        // --- CLI SIMULATOR LOGIC ---
+        function handleCliCommand(e) {
+            e.preventDefault();
+            const input = document.getElementById('cli-input');
+            const cmd = input.value.trim();
+            if (!cmd) return;
+
+            const cliScreen = document.getElementById('cli-screen');
+            cliScreen.innerHTML += `<div><span class="text-slate-500">C:\\&gt;</span> ${cmd}</div>`;
+            input.value = '';
+
+            processCommand(cmd);
+            cliScreen.scrollTop = cliScreen.scrollHeight;
+        }
+
+        function processCommand(cmd) {
+            const cliScreen = document.getElementById('cli-screen');
+            const isAutoMdix = document.getElementById('toggle-automdix').checked;
+
+            if (cmd.startsWith('ping')) {
+                const isLargePacket = cmd.includes('-l 1000');
+                const status = analyzePhysicalConnection(currentMasterPinout, currentRemotePinout, isAutoMdix);
+
+                cliScreen.innerHTML += `<div class="text-slate-400">Pinging 192.168.1.1 with 32 bytes of data:</div>`;
+
+                setTimeout(() => {
+                    if (status.physicalState === 'DEAD_TX_RX' || status.physicalState === 'SHORT') {
+                        for (let i = 0; i < 4; i++) {
+                            cliScreen.innerHTML += `<div class="text-rose-400">Destination host unreachable.</div>`;
+                        }
+                    } else if (status.physicalState === 'OPEN_PAIR') {
+                        for (let i = 0; i < 4; i++) {
+                            cliScreen.innerHTML += `<div class="text-rose-400">Request timed out.</div>`;
+                        }
+                    } else if (status.physicalState === 'SPLIT_PAIR' && isLargePacket) {
+                        cliScreen.innerHTML += `<div>Reply from 192.168.1.1: bytes=1000 time=145ms TTL=64</div>`;
+                        cliScreen.innerHTML += `<div>Reply from 192.168.1.1: bytes=1000 time=210ms TTL=64</div>`;
+                        cliScreen.innerHTML += `<div class="text-rose-400">Request timed out.</div>`;
+                        cliScreen.innerHTML += `<div>Reply from 192.168.1.1: bytes=1000 time=180ms TTL=64</div>`;
+                        cliScreen.innerHTML += `<div class="text-amber-400 mt-1">[WARNING]: High Latency & Packet Loss detected!</div>`;
+                    } else {
+                        for (let i = 0; i < 4; i++) {
+                            cliScreen.innerHTML += `<div>Reply from 192.168.1.1: bytes=32 time=1ms TTL=64</div>`;
+                        }
+                        if (status.warningMessage) {
+                            cliScreen.innerHTML += `<div class="text-amber-400 mt-1">[NOTE]: ${status.warningMessage}</div>`;
+                        }
+                    }
+                    cliScreen.scrollTop = cliScreen.scrollHeight;
+                }, 300);
+
+            } else if (cmd === 'arp -a') {
+                cliScreen.innerHTML += `
+                    <div class="text-slate-400">Interface: 192.168.1.50 --- 0x3</div>
+                    <div>  Internet Address      Physical Address      Type</div>
+                    <div>  192.168.1.1           00-1A-2B-3C-4D-5E     dynamic</div>
+                `;
+            } else if (cmd === 'cls' || cmd === 'clear') {
+                cliScreen.innerHTML = '';
+            } else {
+                cliScreen.innerHTML += `<div class="text-slate-500">'${cmd}' is not recognized as an internal or external command.</div>`;
+            }
+        }
+
+        function analyzePhysicalConnection(master, remote, autoMdix) {
+            const m1 = master[0], m2 = master[1], m3 = master[2], m6 = master[5];
+            const r1 = remote[0], r2 = remote[1], r3 = remote[2], r6 = remote[5];
+
+            if (remote[0] === remote[1] && remote[0] !== 'NONE') {
+                return { physicalState: 'SHORT' };
+            }
+
+            if (m1 === 'NONE' || m2 === 'NONE' || r1 === 'NONE' || r2 === 'NONE') {
+                return { physicalState: 'DEAD_TX_RX' };
+            }
+            if (m3 === 'NONE' || r3 === 'NONE') {
+                return { physicalState: 'OPEN_PAIR' };
+            }
+
+            const isStraight = (m1===r1 && m2===r2 && m3===r3 && m6===r6);
+            const isCross = (m1===r3 && m2===r6 && m3===r1 && m6===r2);
+
+            if (master.toString() === ['WO', 'O', 'BL', 'WBL', 'WG', 'G', 'WBR', 'BR'].toString()) {
+                return { physicalState: 'SPLIT_PAIR' };
+            }
+
+            if (isStraight) {
+                return { physicalState: 'OK', warningMessage: null };
+            }
+
+            if (isCross) {
+                if (!autoMdix) {
+                    return { physicalState: 'OK', warningMessage: 'Crossover connection established (Auto-MDIX OFF).' };
+                }
+                return { physicalState: 'OK', warningMessage: 'Auto-MDIX feature resolved polarity automatically.' };
+            }
+
+            if (m1===r2 && m2===r1) {
+                return { physicalState: 'OPEN_PAIR' };
+            }
+
+            if (master[3] === remote[4] && master[4] === remote[3]) {
+                return { physicalState: 'OK', warningMessage: 'Warning: Inverted Pair detected on Pins 4 & 5.' };
+            }
+
+            if ((remote[6] === 'NONE' || remote[7] === 'NONE')) {
+                return { physicalState: 'OK', warningMessage: 'Fast Ethernet OK. Gigabit impaired due to Pin 7/8 open.' };
+            }
+
+            return { physicalState: 'OPEN_PAIR' };
+        }
+
+        // --- BAGIAN 2: TROUBLESHOOTING LOGIC & VERIFIKASI ---
+        function renderCaseButtons() {
+            const container = document.getElementById('case-selector-buttons');
+            container.innerHTML = '';
+
+            TROUBLESHOOTING_CASES.forEach((c) => {
+                const btn = document.createElement('button');
+                btn.id = `btn-case-${c.id}`;
+                btn.className = `py-2 px-3 rounded-xl text-xs font-semibold border transition shadow-sm ${c.id === activeCaseId ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`;
+                btn.innerText = `Case ${c.id}`;
+                btn.onclick = () => loadCase(c.id);
+                container.appendChild(btn);
+            });
+        }
+
+        function loadCase(caseId) {
+            activeCaseId = caseId;
+            const c = TROUBLESHOOTING_CASES.find(item => item.id === caseId);
+
+            document.querySelectorAll('#case-selector-buttons button').forEach(b => {
+                b.className = 'py-2 px-3 rounded-xl text-xs font-semibold border transition shadow-sm bg-white text-slate-700 border-slate-200 hover:bg-slate-50';
+            });
+            document.getElementById(`btn-case-${caseId}`).className = 'py-2 px-3 rounded-xl text-xs font-semibold border transition shadow-sm bg-slate-900 text-white border-slate-900';
+
+            document.getElementById('case-title').innerText = c.name;
+            document.getElementById('case-target-standard').innerText = `Target: ${c.target}`;
+            document.getElementById('case-description').innerText = c.desc;
+
+            currentMasterPinout = [...c.master];
+            currentRemotePinout = [...c.remote];
+
+            renderPinoutSelectors();
+            if (isTesterRunning) restartLANSweep();
+            document.getElementById('diagnostic-report').classList.add('hidden');
+
+            resetTimer();
+        }
+
+        function verifyFix() {
+            const c = TROUBLESHOOTING_CASES.find(item => item.id === activeCaseId);
+            const reportBox = document.getElementById('diagnostic-report');
+            const l1 = document.getElementById('report-l1');
+            const l2 = document.getElementById('report-l2');
+            const l3 = document.getElementById('report-l3');
+            const verdict = document.getElementById('report-verdict');
+
+            reportBox.classList.remove('hidden');
+
+            const isFixed = currentRemotePinout.toString() === c.solutionRemote.toString();
+
+            if (isFixed) {
+                l1.innerText = "Physical Layer Status: OK (Continuity Passed)";
+                l1.className = "font-semibold text-emerald-600";
+                
+                l2.innerText = "Data Link Status: Active (Auto-MDIX Synced)";
+                l2.className = "font-semibold text-emerald-600";
+
+                l3.innerText = "Network Latency: < 1ms (0% Loss)";
+                l3.className = "font-semibold text-emerald-600";
+
+                verdict.className = "mt-4 p-3 rounded-xl text-center text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200";
+                verdict.innerText = "PERBAIKAN SUKSES! Masalah pada fisik kabel berhasil diselesaikan dengan presisi.";
+
+                // Tambahkan kasus ke daftar selesai & perbarui UI checklist
+                completedCases.add(activeCaseId);
+                renderChecklistUI();
+            } else {
+                l1.innerText = "Physical Layer Status: DAMAGED / MISWIRED";
+                l1.className = "font-semibold text-rose-600";
+                
+                l2.innerText = "Data Link Status: INACTIVE (Physical Fault)";
+                l2.className = "font-semibold text-rose-600";
+
+                l3.innerText = "Network Latency: TIMEOUT / HIGH LATENCY";
+                l3.className = "font-semibold text-rose-600";
+
+                verdict.className = "mt-4 p-3 rounded-xl text-center text-xs font-bold bg-rose-50 text-rose-600 border border-rose-200";
+                verdict.innerText = "PERBAIKAN GAGAL! Posisi kawat di Ujung Remote belum sesuai dengan standar target.";
+            }
+        }
+
+        // --- TIMER LOGIC ---
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timerSeconds = 0;
+            document.getElementById('challenge-timer').innerText = "00:00";
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+                const secs = String(timerSeconds % 60).padStart(2, '0');
+                document.getElementById('challenge-timer').innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
