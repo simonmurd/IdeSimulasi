@@ -3,95 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wi-Fi Optimization - Tablet Interface</title>
+    <title>Enterprise Wi-Fi Simulator - UniFi Style</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Modern Minimalist Tablet UI CSS */
+        /* Enterprise UI Variables */
         :root {
-            --bg-color: #e9eff5;
-            --tablet-bg: #ffffff;
-            --primary: #007aff;
-            --text-main: #1d1d1f;
-            --text-muted: #86868b;
-            --border: #e5e5ea;
-            --success: #34c759;
-            --warning: #ff9f0a;
-            --danger: #ff3b30;
+            --bg-main: #f5f6f8;
+            --bg-sidebar: #191c24;
+            --bg-card: #ffffff;
+            --primary: #0060d6;
+            --primary-hover: #004bb5;
+            --text-dark: #121314;
+            --text-muted: #6b7280;
+            --text-light: #e5e7eb;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --sidebar-width: 340px;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
             margin: 0;
-            padding: 20px;
+            padding: 0;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        .tablet-device {
-            background: var(--tablet-bg);
-            width: 100%;
-            max-width: 1180px;
-            height: 850px;
-            border-radius: 32px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1), inset 0 0 0 8px #f5f5f7;
-            display: flex;
+            height: 100vh;
             overflow: hidden;
-            position: relative;
+            color: var(--text-dark);
         }
 
-        /* Sidebar: Scenarios */
+        /* Sidebar Styling */
         .sidebar {
-            width: 320px;
-            background: #fbfbfd;
-            border-right: 1px solid var(--border);
+            width: var(--sidebar-width);
+            background: var(--bg-sidebar);
             display: flex;
             flex-direction: column;
-            padding: 20px 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 10;
         }
 
         .sidebar-header {
-            padding: 0 20px 15px;
-            border-bottom: 1px solid var(--border);
+            padding: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
         }
 
         .sidebar-header h2 {
             margin: 0;
-            font-size: 20px;
-            color: var(--text-main);
+            font-size: 18px;
+            color: #ffffff;
+            font-weight: 600;
         }
 
         .scenario-list {
             flex: 1;
             overflow-y: auto;
-            padding: 15px 20px;
+            padding: 16px 12px;
             list-style: none;
             margin: 0;
         }
 
+        .scenario-list::-webkit-scrollbar { width: 6px; }
+        .scenario-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+
         .scenario-item {
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            margin-bottom: 12px;
+            padding: 14px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
             font-size: 13px;
-            color: var(--text-muted);
+            color: var(--text-light);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            background: rgba(255,255,255,0.02);
+            line-height: 1.5;
         }
         
+        .scenario-item:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
         .scenario-item.active {
-            border-color: var(--primary);
-            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
-            color: var(--text-main);
+            border-left-color: var(--primary);
+            background: rgba(0, 96, 214, 0.1);
+            color: #ffffff;
         }
 
         .scenario-item strong {
             display: block;
-            color: var(--text-main);
-            margin-bottom: 5px;
+            color: #ffffff;
+            margin-bottom: 4px;
             font-size: 14px;
         }
 
@@ -101,285 +119,576 @@
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            padding: 30px;
+            padding: 32px 40px;
         }
 
         .header-title {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 600;
-            margin: 0 0 25px 0;
-            color: var(--text-main);
+            margin: 0 0 8px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
-        .grid-layout {
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .dashboard-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 2fr 1fr;
             gap: 24px;
         }
 
+        /* Cards */
         .card {
-            background: white;
-            border-radius: 16px;
+            background: var(--bg-card);
+            border-radius: 12px;
             border: 1px solid var(--border);
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.02);
         }
 
-        .card h3 {
-            margin: 0 0 15px 0;
+        .card-header {
             font-size: 16px;
-            color: var(--text-main);
+            font-weight: 600;
+            margin: 0 0 20px 0;
             display: flex;
             align-items: center;
             gap: 8px;
+            color: var(--text-dark);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
         }
 
-        /* Controls */
-        .controls-grid {
+        /* Forms & Controls */
+        .config-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
 
         .form-group label {
-            display: block;
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 600;
             color: var(--text-muted);
-            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        select {
+        select, input[type="text"], input[type="password"], input[type="number"] {
             width: 100%;
             padding: 10px 12px;
-            border-radius: 10px;
+            border-radius: 6px;
             border: 1px solid var(--border);
-            background: #fbfbfd;
+            background: #fafafa;
             font-size: 14px;
-            color: var(--text-main);
+            color: var(--text-dark);
+            font-family: inherit;
+            transition: all 0.2s;
+            box-sizing: border-box;
+        }
+        
+        select:focus, input:focus { 
+            border-color: var(--primary); 
+            background: #ffffff;
             outline: none;
-            appearance: none;
+            box-shadow: 0 0 0 3px rgba(0, 96, 214, 0.15);
         }
 
-        select:focus { border-color: var(--primary); }
-
-        /* Canvas */
-        .canvas-container {
+        /* RF Spectrum Canvas */
+        .analyzer-container {
             width: 100%;
-            background: #fbfbfd;
-            border-radius: 12px;
-            padding: 15px 0;
-            border: 1px solid var(--border);
-        }
-        canvas { display: block; margin: 0 auto; max-width: 100%; }
-
-        .legend { display: flex; justify-content: center; gap: 15px; margin-top: 15px; font-size: 12px; color: var(--text-muted); }
-        .legend span { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: middle; margin-right: 6px; }
-
-        /* Checklist */
-        .checklist-container { grid-column: span 2; }
-        
-        .checklist-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-        }
-
-        .check-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 13px;
-            color: var(--text-main);
-            padding: 8px;
+            background: #111827; /* Dark mode for spectrum analyzer */
             border-radius: 8px;
-            background: #fbfbfd;
-            border: 1px solid var(--border);
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
         }
 
-        .check-item input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--primary);
-            cursor: pointer;
+        canvas { 
+            display: block; 
+            width: 100%; 
+            height: 180px; 
+        }
+
+        .legend { 
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
+            margin-top: 15px; 
+            font-size: 12px; 
+            color: #9ca3af; 
         }
         
-        .weight-badge {
-            margin-left: auto;
-            background: var(--bg-color);
-            color: var(--text-muted);
-            font-size: 11px;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-weight: bold;
+        .legend span { 
+            display: inline-block; 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 3px; 
+            margin-right: 6px; 
+            vertical-align: middle;
         }
 
-        /* Score & Feedback */
-        .score-card {
+        /* Score & Feedback Panel */
+        .status-panel {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 20px;
+            text-align: center;
+            padding: 20px 10px;
         }
 
-        .score-circle {
-            width: 80px;
-            height: 80px;
+        .score-ring {
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 36px;
             font-weight: 700;
             color: white;
-            transition: background 0.3s ease;
+            margin-bottom: 20px;
+            transition: all 0.4s ease;
+            box-shadow: inset 0 0 0 8px rgba(255,255,255,0.2);
         }
 
-        .feedback-content { flex: 1; font-size: 14px; color: var(--text-muted); line-height: 1.5; }
-        .feedback-content strong { color: var(--text-main); }
+        .feedback-box {
+            background: var(--bg-main);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--text-dark);
+            text-align: left;
+            width: 100%;
+            box-sizing: border-box;
+            border-left: 4px solid var(--primary);
+        }
+
+        .feedback-box ul {
+            margin: 10px 0 0 0;
+            padding-left: 20px;
+            color: var(--danger);
+        }
+
+        /* Checklist Table Style */
+        .checklist-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .checklist-table th, .checklist-table td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .checklist-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            background: #fafafa;
+        }
+
+        .check-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .badge {
+            background: var(--bg-main);
+            color: var(--text-muted);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .badge.auto { background: #e0f2fe; color: #0284c7; }
+        .badge.manual { background: #f3f4f6; color: #4b5563; }
+
     </style>
 </head>
 <body>
 
-<div class="tablet-device">
-    
-    <!-- Sidebar for Scenarios -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h2>Skenario Troubleshooting</h2>
-        </div>
-        <ul class="scenario-list">
-            <li class="scenario-item active"><strong>Skenario 1: Dense School Area[cite: 1]</strong> Optimalkan AP untuk menghindari interferensi tetangga (Kanal 1 & 11 kuat)[cite: 1].</li>
-            <li class="scenario-item"><strong>Skenario 2: Sticky Client</strong> Perangkat klien menolak roaming ke AP terdekat karena daya transmisi (Tx Power) dibiarkan maksimum.</li>
-            <li class="scenario-item"><strong>Skenario 3: Redaman Fisik</strong> Sinyal 5GHz melemah drastis karena AP terhalang oleh pilar beton dan partisi kaca tebal.</li>
-            <li class="scenario-item"><strong>Skenario 4: Interferensi Non-Wi-Fi</strong> Kinerja jaringan lambat akibat penggunaan microwave dan perangkat Bluetooth di pita 2.4 GHz.</li>
-            <li class="scenario-item"><strong>Skenario 5: Co-Channel Interference</strong> 3 Access Point dalam satu ruangan menggunakan kanal yang sama, menyebabkan bottleneck.</li>
-            <li class="scenario-item"><strong>Skenario 6: Rogue AP</strong> Munculnya SSID duplikat dari router tidak dikenal yang mengganggu lalu lintas autentikasi klien.</li>
-            <li class="scenario-item"><strong>Skenario 7: Bandwidth Berlebihan</strong> Konfigurasi 40MHz pada pita 2.4 GHz menyebabkan gangguan masif pada kanal sebelahnya.</li>
-            <li class="scenario-item"><strong>Skenario 8: Hidden Node Problem</strong> Klien saling bertabrakan paket data karena jarak antar klien terlalu jauh namun terhubung ke AP yang sama.</li>
-            <li class="scenario-item"><strong>Skenario 9: Limitasi Klien Terlampaui</strong> Terlalu banyak perangkat IoT yang terhubung pada satu AP, menghabiskan kapasitas airtime.</li>
-            <li class="scenario-item"><strong>Skenario 10: Firmware Bug</strong> Jaringan terputus secara acak karena AP membutuhkan pembaruan firmware untuk stabilitas.</li>
-        </ul>
+<div class="sidebar">
+    <div class="sidebar-header">
+        <div class="logo-icon">W</div>
+        <h2>Wi-Fi Ops Center</h2>
     </div>
+    <ul class="scenario-list">
+        <li class="scenario-item active"><strong>Skenario 1: Dense School Area</strong> AP terlalu padat. Hindari interferensi tetangga (Kanal 1 & 11 penuh).</li>
+        <li class="scenario-item"><strong>Skenario 2: Sticky Client</strong> Perangkat klien menolak roaming ke AP terdekat akibat Tx Power maksimal.</li>
+        <li class="scenario-item"><strong>Skenario 3: Redaman Fisik</strong> Sinyal 5GHz melemah akibat terhalang beton dan partisi kaca tebal.</li>
+        <li class="scenario-item"><strong>Skenario 4: Interferensi Non-Wi-Fi</strong> Kinerja drop akibat Microwave dan Bluetooth di pita 2.4 GHz.</li>
+        <li class="scenario-item"><strong>Skenario 5: Co-Channel Interference</strong> 3 AP di satu aula memakai kanal yang sama, memicu antrean udara (bottleneck).</li>
+        <li class="scenario-item"><strong>Skenario 6: Rogue AP</strong> Muncul SSID duplikat. Amankan koneksi dan enkripsi autentikasi.</li>
+        <li class="scenario-item"><strong>Skenario 7: Bandwidth Berlebihan</strong> Konfigurasi 40MHz di 2.4 GHz mengganggu semua kanal sebelahnya.</li>
+        <li class="scenario-item"><strong>Skenario 8: Hidden Node Problem</strong> Klien saling bertabrakan data karena jarak fisik terlalu jauh antar klien.</li>
+        <li class="scenario-item"><strong>Skenario 9: Limitasi Klien IoT</strong> Puluhan sensor IoT menghabiskan kapasitas airtime sebuah AP.</li>
+        <li class="scenario-item"><strong>Skenario 10: Firmware Bug</strong> Jaringan terputus acak. Butuh stabilitas dan update sistem operasi AP.</li>
+    </ul>
+</div>
 
-    <!-- Main Workspace -->
-    <div class="main-content">
-        <h1 class="header-title">Wi-Fi Optimization Analyzer</h1>
+<div class="main-content">
+    <div class="header-title">
+        Device Configuration Profile
+        <button style="background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; transition: 0.2s;" onmouseover="this.style.background='var(--primary-hover)'" onmouseout="this.style.background='var(--primary)'">Apply Changes</button>
+    </div>
+    <div class="subtitle" id="currentScenarioTitle">Menyelesaikan Skenario 1: Dense School Area</div>
 
-        <div class="grid-layout">
+    <div class="dashboard-grid">
+        
+        <div class="config-column">
             
-            <!-- Controls -->
-            <div class="card">
-                <h3>⚙️ Konfigurasi Access Point</h3>
-                <div class="controls-grid">
+            <div class="card" style="margin-bottom: 24px;">
+                <h3 class="card-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 1 10 10 10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2z"></path><path d="M12 18a6 6 0 0 0 0-12"></path><circle cx="12" cy="12" r="2"></circle></svg>
+                    Radio & RF Parameters
+                </h3>
+                <div class="config-grid">
                     <div class="form-group">
-                        <label>Band</label>
+                        <label>Operating Band</label>
                         <select id="band" onchange="updateChannels(); updateSim();">
-                            <option value="2.4">2.4 GHz</option>
-                            <option value="5">5 GHz</option>
+                            <option value="2.4">2.4 GHz (802.11b/g/n/ax)</option>
+                            <option value="5">5 GHz (802.11a/n/ac/ax)</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Channel</label>
+                        <label>Radio Channel</label>
                         <select id="channel" onchange="updateSim();"></select>
                     </div>
                     <div class="form-group">
                         <label>Channel Width</label>
                         <select id="width" onchange="updateSim();">
-                            <option value="20">20 MHz</option>
-                            <option value="40">40 MHz</option>
+                            <option value="20">20 MHz (High Density)</option>
+                            <option value="40">40 MHz (High Throughput)</option>
+                            <option value="80">80 MHz (5GHz Only - VHT)</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Tx Power</label>
+                        <label>Transmit Power (Tx)</label>
                         <select id="txpower" onchange="updateSim();">
-                            <option value="high">High Tx Power</option>
-                            <option value="low">Low Tx Power</option>
+                            <option value="high">High (22 dBm)</option>
+                            <option value="medium">Medium (14 dBm)</option>
+                            <option value="low">Low (8 dBm)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h3 class="card-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    WLAN & Security
+                </h3>
+                <div class="config-grid">
+                    <div class="form-group">
+                        <label>Security Protocol</label>
+                        <select id="security" onchange="updateSim();">
+                            <option value="open">Open (No Security)</option>
+                            <option value="wpa2">WPA2 Personal (AES)</option>
+                            <option value="wpa3">WPA3 Personal (SAE)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Client Limit / AP</label>
+                        <select id="clientLimit" onchange="updateSim();">
+                            <option value="unlimited">Unlimited (Default)</option>
+                            <option value="limited">Max 30 Clients</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h3 class="card-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg>
+                    Advanced Features
+                </h3>
+                <div class="config-grid">
+                    <div class="form-group">
+                        <label>Band Steering</label>
+                        <select id="bandSteering" onchange="updateSim();">
+                            <option value="disabled">Disabled</option>
+                            <option value="enabled">Prefer 5GHz</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Fast Roaming (802.11r)</label>
+                        <select id="roaming" onchange="updateSim();">
+                            <option value="disabled">Disabled</option>
+                            <option value="enabled">Enabled (FT)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Legacy Rates</label>
+                        <select id="legacyRates" onchange="updateSim();">
+                            <option value="enabled">Supported (1, 2, 5.5 Mbps)</option>
+                            <option value="disabled">Disabled (Improve Airtime)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Airtime Fairness</label>
+                        <select id="airtimeFairness" onchange="updateSim();">
+                            <option value="disabled">Disabled</option>
+                            <option value="enabled">Enabled</option>
                         </select>
                     </div>
                 </div>
             </div>
 
-            <!-- Score & Feedback -->
-            <div class="card score-card">
-                <div class="score-circle" id="scoreDisplayContainer">0</div>
-                <div class="feedback-content" id="feedbackDisplay">
-                    Pilih konfigurasi dan selesaikan ceklis di bawah untuk melihat hasil evaluasi.
-                </div>
-            </div>
-
-            <!-- Analyzer Graph -->
-            <div class="card" style="grid-column: span 2;">
-                <h3>📈 Observability Trend[cite: 1]</h3>
-                <div class="canvas-container">
-                    <canvas id="wifiCanvas" width="800" height="200"></canvas>
+            <div class="card">
+                <h3 class="card-header">RF Environment Spectrum</h3>
+                <div class="analyzer-container">
+                    <canvas id="wifiCanvas"></canvas>
                     <div class="legend">
-                        <div><span style="background: rgba(255, 59, 48, 0.6);"></span> Neighbor CH 1[cite: 1]</div>
-                        <div><span style="background: rgba(0, 122, 255, 0.6);"></span> Neighbor CH 11[cite: 1]</div>
-                        <div><span style="background: rgba(52, 199, 89, 0.8);"></span> User Simulation[cite: 1]</div>
+                        <div><span style="background: rgba(239, 68, 68, 0.7);"></span> Interferensi / Noise</div>
+                        <div><span style="background: rgba(16, 185, 129, 0.9);"></span> AP Utama Anda</div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Extended Checklist -->
-            <div class="card checklist-container">
-                <h3>✅ Ceklis Troubleshooting (Bobot Berbeda)</h3>
-                <div class="checklist-grid" id="checklistArea">
-                    <!-- Checkbox ini terhubung dengan dropdown UI -->
-                    <div class="check-item"><input type="checkbox" id="chk-1" data-weight="7" disabled> 1. Pilih Band 2.4 GHz (Auto)[cite: 1] <span class="weight-badge">Bobot: 7</span></div>
-                    <div class="check-item"><input type="checkbox" id="chk-2" data-weight="8" disabled> 2. Gunakan Kanal Non-Overlapping (Auto)[cite: 1] <span class="weight-badge">Bobot: 8</span></div>
-                    <div class="check-item"><input type="checkbox" id="chk-3" data-weight="6" disabled> 3. Atur Lebar Kanal 20 MHz (Auto)[cite: 1] <span class="weight-badge">Bobot: 6</span></div>
-                    <div class="check-item"><input type="checkbox" id="chk-4" data-weight="5" disabled> 4. Turunkan Tx Power (Auto)[cite: 1] <span class="weight-badge">Bobot: 5</span></div>
-                    
-                    <!-- Checkbox manual untuk langkah operasional -->
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="8" onchange="calculateResult()"> 5. Lakukan Site Survey Area <span class="weight-badge">Bobot: 8</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="7" onchange="calculateResult()"> 6. Periksa Interferensi Perangkat Non-Wi-Fi <span class="weight-badge">Bobot: 7</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="6" onchange="calculateResult()"> 7. Update Firmware Access Point <span class="weight-badge">Bobot: 6</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="5" onchange="calculateResult()"> 8. Aktifkan Fitur Band Steering ke 5GHz <span class="weight-badge">Bobot: 5</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="4" onchange="calculateResult()"> 9. Pisahkan SSID IoT, Staff, dan Guest <span class="weight-badge">Bobot: 4</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="3" onchange="calculateResult()"> 10. Konfigurasi Keamanan WPA3 <span class="weight-badge">Bobot: 3</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="4" onchange="calculateResult()"> 11. Batasi Maksimal Klien per AP <span class="weight-badge">Bobot: 4</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="5" onchange="calculateResult()"> 12. Evaluasi Redaman Sinyal (Dinding/Kaca) <span class="weight-badge">Bobot: 5</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="6" onchange="calculateResult()"> 13. Matikan Legacy Rates (802.11b) <span class="weight-badge">Bobot: 6</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="7" onchange="calculateResult()"> 14. Atur Minimum RSSI Klien <span class="weight-badge">Bobot: 7</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="3" onchange="calculateResult()"> 15. Aktifkan Protokol Roaming (802.11r) <span class="weight-badge">Bobot: 3</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="4" onchange="calculateResult()"> 16. Verifikasi Kualitas Kabel Uplink (Cat6) <span class="weight-badge">Bobot: 4</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="2" onchange="calculateResult()"> 17. Hindari Penempatan AP Dekat Logam <span class="weight-badge">Bobot: 2</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="3" onchange="calculateResult()"> 18. Analisa Utilisasi Kanal via RF Scanner <span class="weight-badge">Bobot: 3</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="5" onchange="calculateResult()"> 19. Monitor Beban CPU/RAM Access Point <span class="weight-badge">Bobot: 5</span></div>
-                    <div class="check-item"><input type="checkbox" class="manual-chk" data-weight="2" onchange="calculateResult()"> 20. Backup Konfigurasi Sebelum Modifikasi <span class="weight-badge">Bobot: 2</span></div>
                 </div>
             </div>
 
         </div>
+
+        <div class="status-column">
+            <div class="card" style="margin-bottom: 24px; text-align: center;">
+                <h3 class="card-header" style="justify-content: center;">Evaluation Score</h3>
+                <div class="status-panel">
+                    <div class="score-ring" id="scoreDisplayContainer">0</div>
+                    <div class="feedback-box" id="feedbackDisplay">
+                        Sesuaikan parameter untuk mengevaluasi arsitektur jaringan Anda.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-header">Action Items / Checklist</h3>
+                <table class="checklist-table">
+                    <thead>
+                        <tr>
+                            <th>Tugas Validasi</th>
+                            <th style="width: 50px;">Tipe</th>
+                            <th style="width: 30px;">Cek</th>
+                        </tr>
+                    </thead>
+                    <tbody id="checklistArea">
+                        <tr class="check-row">
+                            <td>Pilih Band Frekuensi Tepat</td>
+                            <td><span class="badge auto">Auto</span></td>
+                            <td><input type="checkbox" id="chk-1" disabled></td>
+                        </tr>
+                        <tr class="check-row">
+                            <td>Kanal Non-Overlapping</td>
+                            <td><span class="badge auto">Auto</span></td>
+                            <td><input type="checkbox" id="chk-2" disabled></td>
+                        </tr>
+                        <tr class="check-row">
+                            <td>Optimasi Channel Width</td>
+                            <td><span class="badge auto">Auto</span></td>
+                            <td><input type="checkbox" id="chk-3" disabled></td>
+                        </tr>
+                        <tr class="check-row">
+                            <td>Sesuaikan Tx Power</td>
+                            <td><span class="badge auto">Auto</span></td>
+                            <td><input type="checkbox" id="chk-4" disabled></td>
+                        </tr>
+                        <tr class="check-row">
+                            <td>Pengaturan Keamanan / Klien</td>
+                            <td><span class="badge auto">Auto</span></td>
+                            <td><input type="checkbox" id="chk-5" disabled></td>
+                        </tr>
+                        <tr class="check-row">
+                            <td>Advanced Features (Roaming/Legacy)</td>
+                            <td><span class="badge auto">Auto</span></td>
+                            <td><input type="checkbox" id="chk-6" disabled></td>
+                        </tr>
+                        <tr class="check-row">
+                            <td>Lakukan Site Survey Fisik</td>
+                            <td><span class="badge manual">Manual</span></td>
+                            <td><input type="checkbox" class="manual-chk" onchange="calculateResult()"></td>
+                        </tr>
+                        <tr class="check-row">
+                            <td>Cek Interferensi Non-Wi-Fi</td>
+                            <td><span class="badge manual">Manual</span></td>
+                            <td><input type="checkbox" class="manual-chk" onchange="calculateResult()"></td>
+                        </tr>
+                        <tr class="check-row">
+                            <td>Update Firmware AP</td>
+                            <td><span class="badge manual">Manual</span></td>
+                            <td><input type="checkbox" class="manual-chk" onchange="calculateResult()"></td>
+                        </tr>
+                        <tr class="check-row">
+                            <td>Verifikasi Kabel Uplink / PoE</td>
+                            <td><span class="badge manual">Manual</span></td>
+                            <td><input type="checkbox" class="manual-chk" onchange="calculateResult()"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 </div>
 
 <script>
+    let currentScenarioId = 1;
+
+    // Logika Komprehensif untuk 10 Skenario
+    const scenariosData = {
+        1: { 
+            name: "Dense School Area", 
+            logic: (b, c, w, t, adv) => ({
+                bOk: b === "2.4", 
+                cOk: b === "2.4" && c === 6, 
+                wOk: w === "20", 
+                tOk: t === "low",
+                secOk: adv.legacy === "disabled", // Matikan legacy untuk density
+                advOk: adv.airtime === "enabled"
+            }),
+            err: ["Gunakan 2.4GHz", "Gunakan kanal 6 (1 & 11 penuh)", "Gunakan 20MHz", "Gunakan Tx Power Low", "Matikan Legacy Rates", "Aktifkan Airtime Fairness"]
+        },
+        2: { 
+            name: "Sticky Client", 
+            logic: (b, c, w, t, adv) => ({
+                bOk: true, cOk: true, wOk: true, 
+                tOk: t === "low" || t === "medium",
+                secOk: true,
+                advOk: adv.roaming === "enabled"
+            }),
+            err: ["", "", "", "Turunkan Tx Power agar klien mau pindah", "", "Aktifkan Fast Roaming (802.11r)"]
+        },
+        3: { 
+            name: "Redaman Fisik (Dinding/Kaca)", 
+            logic: (b, c, w, t, adv) => ({
+                bOk: b === "2.4", cOk: true, wOk: w === "20", 
+                tOk: t === "high", secOk: true, advOk: true
+            }),
+            err: ["Pindah ke 2.4GHz (daya tembus lebih baik)", "", "Gunakan 20MHz", "Gunakan Tx Power High", "", ""]
+        },
+        4: { 
+            name: "Interferensi Non-Wi-Fi (Microwave)", 
+            logic: (b, c, w, t, adv) => ({
+                bOk: b === "5", cOk: true, wOk: true, tOk: true, secOk: true, advOk: adv.bandSteer === "enabled"
+            }),
+            err: ["Gunakan pita 5GHz menghindari Microwave", "", "", "", "", "Aktifkan Band Steering ke 5GHz"]
+        },
+        5: { 
+            name: "Co-Channel Interference", 
+            logic: (b, c, w, t, adv) => ({
+                bOk: true, cOk: true, // Asumsi user bebas pilih asal di bawah aturannya
+                wOk: w === "20", tOk: t === "low", secOk: true, advOk: true
+            }),
+            err: ["", "Pastikan kanal berbeda tiap AP", "Gunakan lebar pita 20MHz", "Kurangi Tx Power untuk kurangi tumpang tindih sel", "", ""]
+        },
+        6: { 
+            name: "Rogue AP", 
+            logic: (b, c, w, t, adv) => ({
+                bOk: true, cOk: true, wOk: true, tOk: true,
+                secOk: adv.sec === "wpa3", advOk: true
+            }),
+            err: ["", "", "", "", "Wajib gunakan WPA3 (Management Frame Protection)", ""]
+        },
+        7: { 
+            name: "Bandwidth Berlebihan di 2.4Ghz", 
+            logic: (b, c, w, t, adv) => ({
+                bOk: b === "2.4", cOk: true, wOk: w === "20", tOk: true, secOk: true, advOk: true
+            }),
+            err: ["", "", "Turunkan Channel Width ke 20MHz", "", "", ""]
+        },
+        8: { 
+            name: "Hidden Node Problem", 
+            logic: (b, c, w, t, adv) => ({
+                bOk: true, cOk: true, wOk: true, 
+                tOk: t === "low", secOk: true, advOk: adv.airtime === "enabled"
+            }),
+            err: ["", "", "", "Turunkan Tx Power agar area sel merapat", "", "Aktifkan Airtime Fairness"]
+        },
+        9: { 
+            name: "Limitasi Klien IoT", 
+            logic: (b, c, w, t, adv) => ({
+                bOk: b === "2.4", cOk: true, wOk: "20", tOk: true, 
+                secOk: adv.limit === "limited", advOk: adv.legacy === "disabled"
+            }),
+            err: ["IoT biasa di 2.4Ghz", "", "Stabil di 20MHz", "", "Aktifkan Client Limit", "Matikan Legacy Rates agar airtime IoT efisien"]
+        },
+        10: { 
+            name: "Firmware Bug", 
+            logic: (b, c, w, t, adv) => ({
+                bOk: true, cOk: true, wOk: true, tOk: true, secOk: true, advOk: true
+            }),
+            err: ["", "", "", "", "", "Masalah ini diselesaikan lewat checklist Update Firmware"]
+        }
+    };
+
+    function changeScenario(id, element) {
+        currentScenarioId = id;
+        document.querySelectorAll('.scenario-item').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+        document.getElementById('currentScenarioTitle').innerText = "Menyelesaikan " + element.innerText.split('\n')[0];
+        
+        // Reset Checklist Manual
+        document.querySelectorAll('.manual-chk').forEach(chk => chk.checked = false);
+        
+        // Reset Dropdowns
+        document.getElementById('band').value = "2.4";
+        document.getElementById('width').value = "20";
+        document.getElementById('txpower').value = "medium";
+        document.getElementById('bandSteering').value = "disabled";
+        document.getElementById('security').value = "wpa2";
+        document.getElementById('clientLimit').value = "unlimited";
+        document.getElementById('legacyRates').value = "enabled";
+        document.getElementById('roaming').value = "disabled";
+        document.getElementById('airtimeFairness').value = "disabled";
+
+        updateChannels();
+        updateSim();
+    }
+
     function updateChannels() {
         const band = document.getElementById('band').value;
+        const width = document.getElementById('width');
         const channelSelect = document.getElementById('channel');
         channelSelect.innerHTML = ''; 
 
+        // Handle 80MHz option visibility
         if (band === "2.4") {
-            const channels24 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-            channels24.forEach(ch => {
+            if (width.value === "80") width.value = "20";
+            width.options[2].disabled = true; // disable 80mhz
+            
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].forEach(ch => {
                 let opt = document.createElement('option');
                 opt.value = ch;
-                opt.innerHTML = `${ch}`;
+                opt.innerHTML = `CH ${ch}`;
                 channelSelect.appendChild(opt);
             });
-            document.getElementById('channel').value = "1"; // Default awal salah[cite: 1]
+            channelSelect.value = "1"; 
         } else {
-            const channels5 = [36, 40, 44, 48, 149, 153, 157, 161];
-            channels5.forEach(ch => {
+            width.options[2].disabled = false;
+            [36, 40, 44, 48, 149, 153, 157, 161].forEach(ch => {
                 let opt = document.createElement('option');
                 opt.value = ch;
-                opt.innerHTML = `${ch}`;
+                opt.innerHTML = `CH ${ch}`;
                 channelSelect.appendChild(opt);
             });
+            channelSelect.value = "36";
         }
     }
 
+    // Spectrum Analyzer Visualization (Dark Mode style)
     function drawAnalyzer() {
         const canvas = document.getElementById('wifiCanvas');
         const ctx = canvas.getContext('2d');
@@ -388,127 +697,158 @@
         const width = document.getElementById('width').value;
         const txpower = document.getElementById('txpower').value;
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Make canvas responsive
+        canvas.width = canvas.parentElement.clientWidth - 40;
+        canvas.height = 180;
 
-        // Grid
-        ctx.strokeStyle = "#e5e5ea";
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw grid lines
+        ctx.strokeStyle = "#374151";
         ctx.lineWidth = 1;
         ctx.textAlign = "center";
-        ctx.font = "12px -apple-system";
+        ctx.font = "11px Inter";
+        ctx.fillStyle = "#9ca3af";
         
-        const maxCh = band === "2.4" ? 12 : 9; 
+        const maxCh = band === "2.4" ? 11 : 8; 
         
         for(let i = 1; i <= maxCh; i++) {
            let x = (i / (maxCh + 1)) * canvas.width;
            ctx.beginPath();
            ctx.moveTo(x, 0); 
-           ctx.lineTo(x, canvas.height - 30);
+           ctx.lineTo(x, canvas.height - 25);
            ctx.stroke();
            
-           ctx.fillStyle = "#86868b";
            let label = band === "2.4" ? i : (32 + (i*4));
-           ctx.fillText(label, x, canvas.height - 10);
+           ctx.fillText(label, x, canvas.height - 8);
         }
 
-        function drawSignal(ch, bw, pwr, colorFill, colorStroke) {
+        function drawSignal(ch, bw, pwr, r, g, b, isNoise = false) {
             let chIndex = band === "2.4" ? ch : ((ch - 32) / 4);
             let center = (chIndex / (maxCh + 1)) * canvas.width;
             
-            let spanBase = band === "2.4" ? 2 : 1; 
-            let span = bw === '20' ? (spanBase / (maxCh + 1) * canvas.width) : ((spanBase * 2) / (maxCh + 1) * canvas.width);
+            // Span calculation based on Bandwidth
+            let baseSpan = band === "2.4" ? 2 : 1; 
+            let multiplier = bw === '20' ? 1 : (bw === '40' ? 2 : 4);
+            let span = (baseSpan * multiplier / (maxCh + 1) * canvas.width);
             
-            let heightFactor = pwr === 'high' ? 0.8 : 0.45;
-            let peakY = canvas.height - (canvas.height * heightFactor) - 20;
-            let baseY = canvas.height - 30;
+            let heightFactor = pwr === 'high' ? 0.85 : (pwr === 'medium' ? 0.6 : 0.35);
+            
+            // Add jitter for noise
+            let peakHeight = canvas.height * heightFactor;
+            if(isNoise) peakHeight += (Math.random() * 10 - 5); 
+
+            let peakY = canvas.height - peakHeight - 25;
+            let baseY = canvas.height - 25;
+
+            // Gradient Fill
+            let gradient = ctx.createLinearGradient(0, peakY, 0, baseY);
+            gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.6)`);
+            gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.05)`);
 
             ctx.beginPath();
             ctx.moveTo(center - span, baseY);
-            ctx.quadraticCurveTo(center, peakY - 40, center + span, baseY);
+            // Bell curve shape
+            ctx.bezierCurveTo(center - (span/2), peakY, center + (span/2), peakY, center + span, baseY);
             
-            ctx.fillStyle = colorFill;
+            ctx.fillStyle = gradient;
             ctx.fill();
-            ctx.strokeStyle = colorStroke;
+            
+            ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 1)`;
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            ctx.fillStyle = colorStroke;
-            ctx.fillText(bw + "MHz", center, peakY - 5);
+            if(!isNoise) {
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 10px Inter";
+                ctx.fillText(`AP (${bw}M)`, center, peakY - 8);
+            }
         }
 
-        if (band === "2.4") {
-            // Skenario 1: Tetangga di Channel 1 dan 11[cite: 1]
-            drawSignal(1, '20', 'high', 'rgba(255, 59, 48, 0.2)', 'rgba(255, 59, 48, 0.8)');
-            drawSignal(11, '20', 'high', 'rgba(0, 122, 255, 0.2)', 'rgba(0, 122, 255, 0.8)');
-            
-            let pwr = txpower === 'high' ? 'high' : 'low';
-            drawSignal(userCh, width, pwr, 'rgba(52, 199, 89, 0.3)', 'rgba(52, 199, 89, 1)');
-        } else {
-            let pwr = txpower === 'high' ? 'high' : 'low';
-            drawSignal(userCh, width, pwr, 'rgba(52, 199, 89, 0.3)', 'rgba(52, 199, 89, 1)');
-            ctx.fillStyle = "#86868b";
-            ctx.fillText("Spektrum 5 GHz bersih dari interferensi tetangga pada simulasi ini.", canvas.width / 2, 30);
+        // Draw Environment (Noise/Interference) based on scenario
+        if (currentScenarioId === 1 && band === "2.4") {
+            drawSignal(1, '20', 'high', 239, 68, 68, true);
+            drawSignal(11, '20', 'high', 239, 68, 68, true);
+        } else if (currentScenarioId === 4 && band === "2.4") {
+            // Microwave broadband noise
+            let gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient.addColorStop(0, "rgba(245, 158, 11, 0.2)");
+            gradient.addColorStop(0.5, "rgba(245, 158, 11, 0.4)");
+            gradient.addColorStop(1, "rgba(245, 158, 11, 0.2)");
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, canvas.height - 100, canvas.width, 75);
+            ctx.fillStyle = "#f59e0b";
+            ctx.fillText("⚠ Microwave Interference (Broadband)", canvas.width / 2, canvas.height - 110);
         }
+
+        // Draw User AP
+        drawSignal(userCh, width, txpower, 16, 185, 129); // Success Green
     }
 
     function calculateResult() {
+        // Collect State
         const band = document.getElementById('band').value;
         const channel = parseInt(document.getElementById('channel').value);
         const width = document.getElementById('width').value;
         const txpower = document.getElementById('txpower').value;
         
-        // Logika Automation[cite: 1]
-        const isBandOk = (band === "2.4");
-        const isChanOk = (band === "2.4" && channel === 6); 
-        const isWidthOk = (width === "20");
-        const isTxOk = (txpower === "low");
+        const adv = {
+            bandSteer: document.getElementById('bandSteering').value,
+            sec: document.getElementById('security').value,
+            limit: document.getElementById('clientLimit').value,
+            legacy: document.getElementById('legacyRates').value,
+            roaming: document.getElementById('roaming').value,
+            airtime: document.getElementById('airtimeFairness').value
+        };
 
-        document.getElementById('chk-1').checked = isBandOk;
-        document.getElementById('chk-2').checked = isChanOk;
-        document.getElementById('chk-3').checked = isWidthOk;
-        document.getElementById('chk-4').checked = isTxOk;
+        const scene = scenariosData[currentScenarioId];
+        const res = scene.logic(band, channel, width, txpower, adv);
 
-        // Kalkulasi Total Skor Berdasarkan Bobot
+        // Update Checkboxes
+        document.getElementById('chk-1').checked = res.bOk;
+        document.getElementById('chk-2').checked = res.cOk;
+        document.getElementById('chk-3').checked = res.wOk;
+        document.getElementById('chk-4').checked = res.tOk;
+        document.getElementById('chk-5').checked = res.secOk;
+        document.getElementById('chk-6').checked = res.advOk;
+
+        // Calculate Score (10 items total: 6 auto, 4 manual. Each 10 points)
         let totalScore = 0;
-        
-        // 1. Ceklis Otomatis (UI)
-        if (isBandOk) totalScore += parseInt(document.getElementById('chk-1').dataset.weight);
-        if (isChanOk) totalScore += parseInt(document.getElementById('chk-2').dataset.weight);
-        if (isWidthOk) totalScore += parseInt(document.getElementById('chk-3').dataset.weight);
-        if (isTxOk) totalScore += parseInt(document.getElementById('chk-4').dataset.weight);
+        if(res.bOk) totalScore += 10;
+        if(res.cOk) totalScore += 10;
+        if(res.wOk) totalScore += 10;
+        if(res.tOk) totalScore += 10;
+        if(res.secOk) totalScore += 10;
+        if(res.advOk) totalScore += 10;
 
-        // 2. Ceklis Manual
-        const manualChecks = document.querySelectorAll('.manual-chk');
-        manualChecks.forEach(chk => {
-            if (chk.checked) {
-                totalScore += parseInt(chk.dataset.weight);
-            }
+        document.querySelectorAll('.manual-chk').forEach(chk => {
+            if (chk.checked) totalScore += 10;
         });
 
-        // Update UI
-        const scoreCircle = document.getElementById('scoreDisplayContainer');
-        scoreCircle.innerText = totalScore;
+        // UI Update
+        const circle = document.getElementById('scoreDisplayContainer');
+        circle.innerText = totalScore + "%";
         
-        if (totalScore === 100) {
-            scoreCircle.style.backgroundColor = "var(--success)"; 
-        } else if (totalScore >= 60) {
-            scoreCircle.style.backgroundColor = "var(--warning)"; 
-        } else {
-            scoreCircle.style.backgroundColor = "var(--danger)"; 
-        }
+        let color = "var(--danger)";
+        if (totalScore === 100) color = "var(--success)";
+        else if (totalScore >= 70) color = "var(--warning)";
+        circle.style.backgroundColor = color;
 
-        // Teks Umpan Balik[cite: 1]
-        let feedbackHTML = `Skor saat ini: <strong>${totalScore}/100</strong>.<br>`;
+        // Feedback Generation
+        let fb = `<strong>Skenario: ${scene.name}</strong><br>`;
         if (totalScore === 100) {
-            feedbackHTML += "<span style='color: var(--success); font-weight: 600;'>Sempurna! Semua langkah troubleshooting telah diterapkan.</span>";
+            fb += "<span style='color: var(--success)'>Berhasil! Arsitektur jaringan optimal.</span>";
         } else {
-            feedbackHTML += "Perhatikan konfigurasi Anda:<br>";
-            if (!isBandOk) feedbackHTML += "• Gunakan pita 2.4GHz sesuai skenario.<br>";
-            if (!isChanOk) feedbackHTML += "• Hindari Channel 1 dan 11 yang bertabrakan dengan tetangga.<br>";
-            if (!isWidthOk) feedbackHTML += "• Pertahankan lebar 20MHz agar tidak overlap.<br>";
-            if (!isTxOk) feedbackHTML += "• Kurangi Tx Power untuk mencegah sticky clients.<br>";
-            feedbackHTML += "• Selesaikan sisa ceklis manual operasional.";
+            fb += "Terdapat ketidaksesuaian parameter:<ul>";
+            if(!res.bOk && scene.err[0]) fb += `<li>${scene.err[0]}</li>`;
+            if(!res.cOk && scene.err[1]) fb += `<li>${scene.err[1]}</li>`;
+            if(!res.wOk && scene.err[2]) fb += `<li>${scene.err[2]}</li>`;
+            if(!res.tOk && scene.err[3]) fb += `<li>${scene.err[3]}</li>`;
+            if(!res.secOk && scene.err[4]) fb += `<li>${scene.err[4]}</li>`;
+            if(!res.advOk && scene.err[5]) fb += `<li>${scene.err[5]}</li>`;
+            fb += "</ul><br>Pastikan juga tugas manual telah diceklis.";
         }
-        document.getElementById('feedbackDisplay').innerHTML = feedbackHTML;
+        document.getElementById('feedbackDisplay').innerHTML = fb;
     }
 
     function updateSim() {
@@ -516,18 +856,17 @@
         calculateResult();
     }
 
+    // Handle Window Resize for Canvas
+    window.addEventListener('resize', drawAnalyzer);
+
     window.onload = () => {
+        const scenarios = document.querySelectorAll('.scenario-item');
+        scenarios.forEach((item, index) => {
+            item.setAttribute('onclick', `changeScenario(${index + 1}, this)`);
+        });
+
         updateChannels();
         updateSim();
-        
-        // Skenario klik interaktif (Visual saja)
-        const scenarios = document.querySelectorAll('.scenario-item');
-        scenarios.forEach(item => {
-            item.addEventListener('click', () => {
-                scenarios.forEach(s => s.classList.remove('active'));
-                item.classList.add('active');
-            });
-        });
     };
 </script>
 
