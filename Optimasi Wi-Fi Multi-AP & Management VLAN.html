@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Praktikum Optimasi Wi-Fi Multi-AP & VLAN MikroTik (47 Klien)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --mikrotik-dark: #1b2a38;
+            --mikrotik-blue: #0072bc;
+            --mikrotik-accent: #00a8ff;
+            --bg-light: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: #e2e8f0; color: var(--text-dark); font-family: 'Inter', sans-serif; padding: 16px; }
+        
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background-color: var(--card-bg); 
+            border-radius: 12px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
+            overflow: hidden; 
+        }
+        
+        /* Header Responsif */
+        header { 
+            background: linear-gradient(135deg, var(--mikrotik-dark) 0%, #0f172a 100%); 
+            color: #fff; 
+            padding: 20px 24px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 4px solid var(--mikrotik-accent);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .header-title { display: flex; align-items: center; gap: 14px; }
+        .header-title i { font-size: 24px; color: var(--mikrotik-accent); background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; }
+        .header-title h1 { font-size: 18px; font-weight: 700; }
+        .header-title p { font-size: 11px; color: #94a3b8; }
+
+        .score-box { 
+            background: rgba(255,255,255,0.1); 
+            padding: 8px 16px; 
+            border-radius: 8px; 
+            border: 1px solid rgba(255,255,255,0.2); 
+            text-align: right; 
+        }
+        .score-title { font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px; }
+        .score-value { font-size: 20px; font-weight: 700; color: var(--mikrotik-accent); font-family: 'JetBrains Mono', monospace; }
+
+        /* Topology Area Responsif */
+        .topology-section { padding: 20px 24px; background-color: #ffffff; border-bottom: 1px solid var(--border-color); }
+        .section-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 12px; 
+            font-weight: 700; 
+            color: var(--mikrotik-dark);
+            font-size: 13px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .topology-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        .topology-canvas { 
+            position: relative; 
+            height: 780px; 
+            min-width: 1180px; 
+            background-color: #fafafa; 
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px); 
+            background-size: 24px 24px; 
+            overflow: hidden; 
+        }
+        .connections-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        
+        .wired-line { stroke: #94a3b8; stroke-width: 2.5; transition: all 0.3s; }
+        .wired-line.trunk { stroke: var(--mikrotik-blue); stroke-width: 3; stroke-dasharray: 6 3; }
+        .wireless-line { stroke: #cbd5e1; stroke-width: 1.5; stroke-dasharray: 4 4; transition: all 0.5s ease; }
+        .wireless-line.connected { stroke: var(--mikrotik-accent); stroke-width: 2; stroke-dasharray: 6 3; animation: dashPulse 1.5s linear infinite; }
+        @keyframes dashPulse { to { stroke-dashoffset: -24; } }
+
+        .device-node { position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: center; cursor: pointer; user-select: none; transition: transform 0.2s; }
+        .device-node:active { transform: scale(0.95); }
+        .device-icon-box { width: 50px; height: 50px; background-color: #fff; border: 2px solid var(--border-color); border-radius: 10px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.05); position: relative; }
+        .device-icon-box i { font-size: 20px; color: var(--text-muted); }
+        .device-node.configured .device-icon-box i { color: var(--mikrotik-blue); }
+        
+        .core-node .device-icon-box { width: 56px; height: 56px; background: #f8fafc; }
+        .core-node.configured .device-icon-box { border-color: var(--mikrotik-blue); background: #f1f5f9; }
+        .core-node.configured .device-icon-box i { font-size: 22px; color: var(--mikrotik-blue); }
+
+        .device-label { margin-top: 4px; font-size: 10px; font-weight: 600; background: rgba(255,255,255,0.95); padding: 2px 6px; border: 1px solid #e2e8f0; border-radius: 4px; text-align: center; line-height: 1.2; }
+        .device-ip { font-size: 9px; color: var(--text-muted); font-weight: 500; }
+        .device-node.configured .device-ip { color: var(--mikrotik-accent); font-weight: 600; }
+        
+        .status-badge { position: absolute; top: -5px; right: -5px; width: 16px; height: 16px; border-radius: 50%; background-color: var(--danger-color); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #fff; font-weight: bold; }
+        .status-badge.online { background-color: var(--success-color); }
+
+        /* Styling Khusus Klien Individual (36x36px) */
+        .client-small-node .device-icon-box { width: 34px; height: 34px; border-radius: 6px; }
+        .client-small-node .device-icon-box i { font-size: 14px; }
+        .client-small-node .status-badge { width: 12px; height: 12px; font-size: 7px; top: -3px; right: -3px; }
+        .client-small-node .device-label { font-size: 8px; padding: 1px 4px; margin-top: 2px; }
+        .client-small-node .device-ip { font-size: 7px; }
+
+        /* Posisi Core Nodes */
+        #isp-node { top: 2%; left: 10%; }
+        #router-node { top: 2%; left: 50%; transform: translateX(-50%); }
+        #switch-node { top: 14%; left: 50%; transform: translateX(-50%); }
+        
+        #ap1-node { top: 28%; left: 14%; }
+        #ap2-node { top: 28%; left: 38%; }
+        #ap3-node { top: 28%; left: 62%; }
+        #ap4-node { top: 28%; left: 86%; }
+
+        /* Content Layout */
+        .lkpd-body { padding: 24px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; }
+        .card { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; }
+        .card-title { font-size: 14px; font-weight: 700; color: var(--mikrotik-dark); margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Checklist Styling */
+        .checklist-group { display: flex; flex-direction: column; gap: 8px; }
+        .checklist-item { display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border: 1px solid var(--border-color); padding: 10px 12px; border-radius: 8px; transition: all 0.2s; gap: 8px; }
+        .checklist-item.completed { background: #f0fdf4; border-color: #bbf7d0; }
+        .item-info { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 500; }
+        .item-info i { font-size: 15px; color: var(--text-muted); flex-shrink: 0; }
+        .checklist-item.completed .item-info i { color: var(--success-color); }
+        .item-points { font-size: 10px; font-weight: 700; background: #e2e8f0; color: var(--text-dark); padding: 3px 6px; border-radius: 10px; white-space: nowrap; }
+        .checklist-item.completed .item-points { background: #dcfce7; color: #15803d; }
+
+        /* Terminal & Controls */
+        .terminal-box { background: #0f172a; color: #38bdf8; font-family: 'JetBrains Mono', monospace; font-size: 11px; border-radius: 8px; padding: 12px; height: 220px; overflow-y: auto; line-height: 1.5; }
+        .terminal-success { color: #4ade80; } .terminal-fail { color: #f87171; } .terminal-warn { color: #fbbf24; }
+        .ping-controls { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-top: 12px; }
+        .ping-controls select, .ping-controls button { padding: 10px 8px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .btn-cisco { background: var(--mikrotik-dark); color: #fff; border: none; cursor: pointer; font-weight: 600; padding: 8px 14px; border-radius: 6px; transition: background 0.2s; }
+        .btn-cisco:hover { background: var(--mikrotik-blue); }
+
+        /* Modal Settings */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,23,42,0.6); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.2s; z-index: 100; padding: 12px; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .cisco-modal { background: #fff; width: 100%; max-width: 460px; border-radius: 10px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
+        .modal-header { background: var(--mikrotik-dark); color: #fff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .modal-body { padding: 16px; max-height: 70vh; overflow-y: auto; }
+        .form-grid { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+        .form-grid label { font-size: 11px; font-weight: 600; color: var(--text-dark); }
+        .form-grid input, .form-grid select { padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; font-family: inherit; }
+        .modal-footer { padding: 10px 16px; background: #f8fafc; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border-color); }
+        
+        .badge-info { font-size: 10px; background: #e0f2fe; color: #0369a1; padding: 8px 10px; border-radius: 6px; margin-bottom: 10px; line-height: 1.4; }
+
+        @media (max-width: 768px) {
+            body { padding: 8px; }
+            header { flex-direction: column; align-items: stretch; text-align: center; }
+            .header-title { flex-direction: column; text-align: center; }
+            .score-box { text-align: center; }
+            .lkpd-body { grid-template-columns: 1fr; padding: 12px; gap: 16px; }
+            .ping-controls { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-title">
+            <i class="fa-solid fa-network-wired"></i>
+            <div>
+                <h1>Optimasi Wi-Fi Multi-AP & Management VLAN</h1>
+                <p>Core Router MikroTik | 4 Access Point | 47 Perangkat Klien (PC, Laptop, Tablet, Smartphone)</p>
+            </div>
+        </div>
+        <div class="score-box">
+            <div class="score-title">Nilai Praktikum</div>
+            <div class="score-value" id="total-score">0 / 100</div>
+        </div>
+    </header>
+
+    <div class="topology-section">
+        <div class="section-header">
+            <span><i class="fa-solid fa-hand-pointer"></i> Diagram Topologi Jaringan (Klik node perangkat individual untuk konfigurasi)</span>
+            <button class="btn-cisco" style="font-size: 11px; padding: 4px 10px; background: #64748b;" onclick="resetAllConfigs()"><i class="fa-solid fa-rotate-right"></i> Reset Simulasi</button>
+        </div>
+        
+        <div class="topology-wrapper">
+            <div class="topology-canvas" id="canvas-area">
+                <svg class="connections-svg" id="svg-connections"></svg>
+
+                <!-- ISP Modem -->
+                <div class="device-node" id="isp-node">
+                    <div class="device-icon-box"><i class="fa-solid fa-globe"></i></div>
+                    <div class="device-label">Internet / ISP<br><span class="device-ip">ether1 (WAN)</span></div>
+                </div>
+
+                <!-- Core Router Mikrotik -->
+                <div class="device-node core-node" id="router-node" onclick="openModal('router-modal')">
+                    <div class="device-icon-box"><i class="fa-solid fa-server"></i><div class="status-badge" id="router-badge">!</div></div>
+                    <div class="device-label">Core Router MikroTik<br><span class="device-ip" id="lbl-router-ip">Unconfigured</span></div>
+                </div>
+
+                <!-- Switch Trunk -->
+                <div class="device-node core-node" id="switch-node">
+                    <div class="device-icon-box"><i class="fa-solid fa-network-wired"></i></div>
+                    <div class="device-label">Switch Unmanaged<br><span class="device-ip">Trunk / All VLANs</span></div>
+                </div>
+
+                <!-- 4 Access Points -->
+                <div class="device-node core-node" id="ap1-node" onclick="openAPModal(1)">
+                    <div class="device-icon-box"><i class="fa-solid fa-wifi"></i><div class="status-badge" id="ap1-badge">!</div></div>
+                    <div class="device-label">AP 1 (Gedung A)<br><span class="device-ip" id="lbl-ap1-ip">192.168.1.2</span></div>
+                </div>
+
+                <div class="device-node core-node" id="ap2-node" onclick="openAPModal(2)">
+                    <div class="device-icon-box"><i class="fa-solid fa-wifi"></i><div class="status-badge" id="ap2-badge">!</div></div>
+                    <div class="device-label">AP 2 (Gedung B)<br><span class="device-ip" id="lbl-ap2-ip">192.168.1.3</span></div>
+                </div>
+
+                <div class="device-node core-node" id="ap3-node" onclick="openAPModal(3)">
+                    <div class="device-icon-box"><i class="fa-solid fa-wifi"></i><div class="status-badge" id="ap3-badge">!</div></div>
+                    <div class="device-label">AP 3 (Gedung C)<br><span class="device-ip" id="lbl-ap3-ip">192.168.1.4</span></div>
+                </div>
+
+                <div class="device-node core-node" id="ap4-node" onclick="openAPModal(4)">
+                    <div class="device-icon-box"><i class="fa-solid fa-wifi"></i><div class="status-badge" id="ap4-badge">!</div></div>
+                    <div class="device-label">AP 4 (Gedung D)<br><span class="device-ip" id="lbl-ap4-ip">192.168.1.5</span></div>
+                </div>
+
+                <!-- Node Klien Individual (47 Unit) akan dirender secara otomatis melalui JS -->
+            </div>
+        </div>
+    </div>
+
+    <div class="lkpd-body">
+        <!-- LKPD Checklist Task Card -->
+        <div class="card">
+            <div class="card-title">
+                <span><i class="fa-solid fa-list-check"></i> Checklist Indikator Praktikum</span>
+            </div>
+            <div class="checklist-group">
+                <div class="checklist-item" id="chk-vlan">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-vlan"></i>
+                        <span>1. Konfigurasi Interface VLAN (VLAN 10, 20, 30) di Router</span>
+                    </div>
+                    <span class="item-points">20 Poin</span>
+                </div>
+
+                <div class="checklist-item" id="chk-dhcp">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-dhcp"></i>
+                        <span>2. DHCP Server & IP Gateway (VLAN 10, 20, 30, Mgmt)</span>
+                    </div>
+                    <span class="item-points">20 Poin</span>
+                </div>
+
+                <div class="checklist-item" id="chk-aps">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-aps"></i>
+                        <span>3. Setting 4 AP (IP Mgmt, Non-overlapping Ch, Off DHCP) <b id="ap-progress">(0/4)</b></span>
+                    </div>
+                    <span class="item-points">40 Poin</span>
+                </div>
+
+                <div class="checklist-item" id="chk-clients">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-clients"></i>
+                        <span>4. Validasi IP DHCP Klien Individual (47 Unit) & QoS <b id="client-progress">(0/47)</b></span>
+                    </div>
+                    <span class="item-points">20 Poin</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal Card -->
+        <div class="card">
+            <div class="card-title"><span><i class="fa-solid fa-terminal"></i> Terminal Pengujian & Speedtest</span></div>
+            <div class="terminal-box" id="terminal-output">
+                <div>[SYSTEM] Menunggu pengujian jaringan dan validasi klien...</div>
+            </div>
+            <div class="ping-controls">
+                <select id="ping-source"></select>
+                <select id="ping-target"></select>
+                <button class="btn-cisco" onclick="runPingTest()">Uji Ping</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL CONFIGURATIONS ================= -->
+
+<!-- 1. Modal Core Router MikroTik -->
+<div class="modal-overlay" id="router-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-server"></i> Konfigurasi Core Router MikroTik</h3>
+            <button onclick="closeModal('router-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="badge-info">Isikan IP Gateway & Aktifkan VLAN, DHCP Server, serta Simple Queue (QoS).</div>
+            <div class="form-grid">
+                <label>IP Management AP (ether2)</label>
+                <input type="text" id="cfg-r-mgmt" placeholder="contoh: 192.168.1.1/24">
+            </div>
+            <div class="form-grid">
+                <label>Gateway VLAN 10 (WLAN_PC_Lab)</label>
+                <input type="text" id="cfg-r-vlan10" placeholder="contoh: 192.168.10.1/24">
+            </div>
+            <div class="form-grid">
+                <label>Gateway VLAN 20 (WLAN_Laptop)</label>
+                <input type="text" id="cfg-r-vlan20" placeholder="contoh: 192.168.20.1/24">
+            </div>
+            <div class="form-grid">
+                <label>Gateway VLAN 30 (WLAN_Mobile)</label>
+                <input type="text" id="cfg-r-vlan30" placeholder="contoh: 192.168.30.1/24">
+            </div>
+            <div class="form-grid">
+                <label>Status DHCP Server VLANs</label>
+                <select id="cfg-r-dhcp">
+                    <option value="disabled">Disabled</option>
+                    <option value="enabled">Enabled (Pool Active)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Status Simple Queue (QoS Limit Speed)</label>
+                <select id="cfg-r-queue">
+                    <option value="disabled">Disabled</option>
+                    <option value="enabled">Enabled (VLAN 10/20: 10M, VLAN 30: 5M)</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="saveRouterConfig()">Simpan Script RouterOS</button>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Modal Access Point (Generic) -->
+<div class="modal-overlay" id="ap-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3 id="ap-modal-title"><i class="fa-solid fa-wifi"></i> Setting Access Point</h3>
+            <button onclick="closeModal('ap-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="active-ap-id">
+            <div class="badge-info" id="ap-modal-info">Panduan AP</div>
+            <div class="form-grid">
+                <label>Management IP Statis</label>
+                <input type="text" id="cfg-ap-ip" placeholder="192.168.1.x">
+            </div>
+            <div class="form-grid">
+                <label>DHCP Server AP</label>
+                <select id="cfg-ap-dhcp">
+                    <option value="enabled">Enabled (Salah - Penyebab Bentrok IP)</option>
+                    <option value="disabled">Disabled (Wajib untuk Bridge MikroTik)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Kanal 2,4 GHz (Width 20MHz)</label>
+                <select id="cfg-ap-ch2">
+                    <option value="">-- Pilih Kanal 2.4 GHz --</option>
+                    <option value="1">Kanal 1 (2412 MHz)</option>
+                    <option value="6">Kanal 6 (2437 MHz)</option>
+                    <option value="11">Kanal 11 (2462 MHz)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Kanal 5 GHz (Width 40MHz)</label>
+                <select id="cfg-ap-ch5">
+                    <option value="">-- Pilih Kanal 5 GHz --</option>
+                    <option value="36">Kanal 36 (5180 MHz)</option>
+                    <option value="44">Kanal 44 (5220 MHz)</option>
+                    <option value="149">Kanal 149 (5745 MHz)</option>
+                    <option value="157">Kanal 157 (5785 MHz)</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="saveAPConfig()">Simpan Konfigurasi AP</button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Modal Klien Device Individual -->
+<div class="modal-overlay" id="client-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3 id="client-modal-title"><i class="fa-solid fa-laptop"></i> Pengaturan Perangkat Klien</h3>
+            <button onclick="closeModal('client-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="active-client-id">
+            <div class="badge-info" id="client-modal-info">Info VLAN Client</div>
+            <div class="form-grid">
+                <label>Koneksi SSID / VLAN</label>
+                <select id="cfg-client-ssid">
+                    <option value="">-- Hubungkan ke SSID --</option>
+                    <option value="WLAN_PC_Lab">WLAN_PC_Lab (VLAN 10)</option>
+                    <option value="WLAN_Laptop">WLAN_Laptop (VLAN 20)</option>
+                    <option value="WLAN_Mobile">WLAN_Mobile (VLAN 30)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Mode Alokasi IP Address</label>
+                <select id="cfg-client-mode">
+                    <option value="static">Statis (Manual)</option>
+                    <option value="dhcp">DHCP Client (Otomatis dari MikroTik)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>IP Address yang Diterima</label>
+                <input type="text" id="cfg-client-ip" readonly placeholder="Klik 'Minta IP DHCP'">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" style="background:#0284c7;" onclick="requestClientDHCP()">Minta IP DHCP</button>
+            <button class="btn-cisco" style="background:#10b981;" onclick="testClientSpeed()">Uji Speedtest (QoS)</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= JAVASCRIPT ENGINE & AUTO-GRADER ================= -->
+<script>
+    let routerConfig = { mgmt: "", vlan10: "", vlan20: "", vlan30: "", dhcp: "disabled", queue: "disabled" };
+    
+    let apConfigs = {
+        1: { name: "AP 1 (Gedung A)", targetIp: "192.168.1.2", ip: "192.168.1.2", dhcp: "enabled", ch2: "", ch5: "", targetCh2: "1", targetCh5: "36" },
+        2: { name: "AP 2 (Gedung B)", targetIp: "192.168.1.3", ip: "192.168.1.3", dhcp: "enabled", ch2: "", ch5: "", targetCh2: "6", targetCh5: "44" },
+        3: { name: "AP 3 (Gedung C)", targetIp: "192.168.1.4", ip: "192.168.1.4", dhcp: "enabled", ch2: "", ch5: "", targetCh2: "11", targetCh5: "149" },
+        4: { name: "AP 4 (Gedung D)", targetIp: "192.168.1.5", ip: "192.168.1.5", dhcp: "enabled", ch2: "", ch5: "", targetCh2: "1", targetCh5: "157" }
+    };
+
+    // Inisialisasi 47 unit perangkat klien secara individual
+    let clientConfigs = {};
+
+    function initClientData() {
+        clientConfigs = {};
+        const types = [
+            { prefix: 'PC', count: 10, targetSsid: 'WLAN_PC_Lab', targetSubnet: '192.168.10.', maxSpeed: '10 Mbps', apNodeId: 'ap1-node', icon: 'fa-desktop', name: 'PC Lab' },
+            { prefix: 'L', count: 15, targetSsid: 'WLAN_Laptop', targetSubnet: '192.168.20.', maxSpeed: '10 Mbps', apNodeId: 'ap2-node', icon: 'fa-laptop', name: 'Laptop Guru' },
+            { prefix: 'T', count: 12, targetSsid: 'WLAN_Mobile', targetSubnet: '192.168.30.', maxSpeed: '5 Mbps', apNodeId: 'ap3-node', icon: 'fa-tablet-screen-button', name: 'Tablet Siswa' },
+            { prefix: 'S', count: 10, targetSsid: 'WLAN_Mobile', targetSubnet: '192.168.30.', maxSpeed: '5 Mbps', apNodeId: 'ap4-node', icon: 'fa-mobile-screen-button', name: 'Smartphone' }
+        ];
+
+        types.forEach(t => {
+            for (let i = 1; i <= t.count; i++) {
+                let id = `${t.prefix}${i}`;
+                clientConfigs[id] = {
+                    id: id,
+                    prefix: t.prefix,
+                    num: i,
+                    name: `${t.name} ${id}`,
+                    targetSsid: t.targetSsid,
+                    targetSubnet: t.targetSubnet,
+                    maxSpeed: t.maxSpeed,
+                    apNodeId: t.apNodeId,
+                    ssid: "",
+                    mode: "static",
+                    ip: "",
+                    icon: t.icon
+                };
+            }
+        });
+    }
+
+    function renderClientNodes() {
+        const canvas = document.getElementById('canvas-area');
+        document.querySelectorAll('.client-node-item').forEach(el => el.remove());
+
+        const layoutGroups = [
+            { prefix: 'PC', count: 10, cols: 5, startX: 2, stepX: 4.2, startY: 42, stepY: 10 },
+            { prefix: 'L', count: 15, cols: 5, startX: 25, stepX: 4.2, startY: 42, stepY: 10 },
+            { prefix: 'T', count: 12, cols: 4, startX: 50, stepX: 5.2, startY: 42, stepY: 10 },
+            { prefix: 'S', count: 10, cols: 5, startX: 74, stepX: 4.2, startY: 42, stepY: 10 }
+        ];
+
+        layoutGroups.forEach(g => {
+            for (let i = 1; i <= g.count; i++) {
+                let id = `${g.prefix}${i}`;
+                let col = (i - 1) % g.cols;
+                let row = Math.floor((i - 1) / g.cols);
+                let left = g.startX + (col * g.stepX);
+                let top = g.startY + (row * g.stepY);
+
+                let div = document.createElement('div');
+                div.className = 'device-node client-node-item client-small-node';
+                div.id = `client-${id}-node`;
+                div.style.top = `${top}%`;
+                div.style.left = `${left}%`;
+                div.onclick = () => openClientModal(id);
+
+                let cfg = clientConfigs[id];
+                div.innerHTML = `
+                    <div class="device-icon-box">
+                        <i class="fa-solid ${cfg.icon}"></i>
+                        <div class="status-badge" id="${id}-badge">!</div>
+                    </div>
+                    <div class="device-label">${id}<br><span class="device-ip" id="lbl-${id}-ip">Static</span></div>
+                `;
+                canvas.appendChild(div);
+            }
+        });
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function drawLine(id1, id2, isWireless) {
+        const el1 = document.getElementById(id1);
+        const el2 = document.getElementById(id2);
+        if(!el1 || !el2) return '';
+
+        const cvs = document.getElementById('canvas-area').getBoundingClientRect();
+        const r1 = el1.getBoundingClientRect();
+        const r2 = el2.getBoundingClientRect();
+        
+        const x1 = r1.left - cvs.left + r1.width/2;
+        const y1 = r1.top - cvs.top + r1.height/2;
+        const x2 = r2.left - cvs.left + r2.width/2;
+        const y2 = r2.top - cvs.top + r2.height/2;
+
+        let cls = isWireless ? "wireless-line connected" : "wired-line trunk";
+        return `<line class="${cls}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`;
+    }
+
+    function renderTopology() {
+        let svg = '';
+        svg += drawLine('isp-node', 'router-node', false);
+        svg += drawLine('router-node', 'switch-node', false);
+        svg += drawLine('switch-node', 'ap1-node', false);
+        svg += drawLine('switch-node', 'ap2-node', false);
+        svg += drawLine('switch-node', 'ap3-node', false);
+        svg += drawLine('switch-node', 'ap4-node', false);
+
+        // Visualisasi garis jaringan individual untuk 47 klien
+        for (let id in clientConfigs) {
+            let cl = clientConfigs[id];
+            if (cl.ip) {
+                svg += drawLine(cl.apNodeId, `client-${id}-node`, true);
+            }
+        }
+
+        document.getElementById('svg-connections').innerHTML = svg;
+    }
+
+    window.addEventListener('resize', renderTopology);
+
+    function saveRouterConfig() {
+        routerConfig.mgmt = document.getElementById('cfg-r-mgmt').value.trim();
+        routerConfig.vlan10 = document.getElementById('cfg-r-vlan10').value.trim();
+        routerConfig.vlan20 = document.getElementById('cfg-r-vlan20').value.trim();
+        routerConfig.vlan30 = document.getElementById('cfg-r-vlan30').value.trim();
+        routerConfig.dhcp = document.getElementById('cfg-r-dhcp').value;
+        routerConfig.queue = document.getElementById('cfg-r-queue').value;
+
+        document.getElementById('lbl-router-ip').innerText = routerConfig.mgmt || "Unconfigured";
+        logTerminal(`[ROUTER] Konfigurasi Gateway & VLAN disimpan`, "terminal-warn");
+        closeModal('router-modal');
+        evaluateTasks();
+    }
+
+    function openAPModal(id) {
+        document.getElementById('active-ap-id').value = id;
+        const ap = apConfigs[id];
+        document.getElementById('ap-modal-title').innerText = `Setting ${ap.name}`;
+        document.getElementById('ap-modal-info').innerText = `Target IP: ${ap.targetIp} | Target 2.4GHz: Ch ${ap.targetCh2} | Target 5GHz: Ch ${ap.targetCh5}`;
+        document.getElementById('cfg-ap-ip').value = ap.ip;
+        document.getElementById('cfg-ap-dhcp').value = ap.dhcp;
+        document.getElementById('cfg-ap-ch2').value = ap.ch2;
+        document.getElementById('cfg-ap-ch5').value = ap.ch5;
+        openModal('ap-modal');
+    }
+
+    function saveAPConfig() {
+        const id = document.getElementById('active-ap-id').value;
+        const ap = apConfigs[id];
+        ap.ip = document.getElementById('cfg-ap-ip').value.trim();
+        ap.dhcp = document.getElementById('cfg-ap-dhcp').value;
+        ap.ch2 = document.getElementById('cfg-ap-ch2').value;
+        ap.ch5 = document.getElementById('cfg-ap-ch5').value;
+
+        document.getElementById(`lbl-ap${id}-ip`).innerText = ap.ip || "0.0.0.0";
+        logTerminal(`[ACCESS POINT] ${ap.name} diset ke IP ${ap.ip}, 2.4G Ch:${ap.ch2}, 5G Ch:${ap.ch5}`, "terminal-warn");
+        closeModal('ap-modal');
+        evaluateTasks();
+    }
+
+    function openClientModal(id) {
+        document.getElementById('active-client-id').value = id;
+        const cl = clientConfigs[id];
+        document.getElementById('client-modal-title').innerText = `Konfigurasi ${cl.name}`;
+        document.getElementById('client-modal-info').innerText = `Koneksi Target: ${cl.targetSsid} | Maks Speed Limit: ${cl.maxSpeed}`;
+        document.getElementById('cfg-client-ssid').value = cl.ssid;
+        document.getElementById('cfg-client-mode').value = cl.mode;
+        document.getElementById('cfg-client-ip').value = cl.ip;
+        openModal('client-modal');
+    }
+
+    function requestClientDHCP() {
+        const id = document.getElementById('active-client-id').value;
+        const cl = clientConfigs[id];
+        cl.ssid = document.getElementById('cfg-client-ssid').value;
+        cl.mode = document.getElementById('cfg-client-mode').value;
+
+        if (routerConfig.dhcp !== "enabled") {
+            logTerminal(`[DHCP ERROR] Gagal meminta IP untuk ${id}. DHCP Server pada Router MikroTik belum diaktifkan!`, "terminal-fail");
+            return;
+        }
+
+        if (cl.mode !== "dhcp") {
+            logTerminal(`[WARNING] Ubah Mode Alokasi IP ke 'DHCP Client' terlebih dahulu pada ${id}!`, "terminal-warn");
+            return;
+        }
+
+        // Pengalokasian IP Otomatis per Unit
+        if (cl.prefix === 'PC' && cl.ssid === "WLAN_PC_Lab") cl.ip = `192.168.10.${10 + cl.num}`;
+        else if (cl.prefix === 'L' && cl.ssid === "WLAN_Laptop") cl.ip = `192.168.20.${10 + cl.num}`;
+        else if (cl.prefix === 'T' && cl.ssid === "WLAN_Mobile") cl.ip = `192.168.30.${10 + cl.num}`;
+        else if (cl.prefix === 'S' && cl.ssid === "WLAN_Mobile") cl.ip = `192.168.30.${25 + cl.num}`;
+        else cl.ip = `192.168.1.${100 + cl.num}`;
+
+        document.getElementById('cfg-client-ip').value = cl.ip;
+        document.getElementById(`lbl-${id}-ip`).innerText = cl.ip;
+        logTerminal(`[DHCP SUCCESS] ${cl.name} (${id}) menerima IP: ${cl.ip} (SSID: ${cl.ssid})`, "terminal-success");
+        evaluateTasks();
+    }
+
+    function testClientSpeed() {
+        const id = document.getElementById('active-client-id').value;
+        const cl = clientConfigs[id];
+        if(!cl.ip) {
+            logTerminal(`[SPEEDTEST ERROR] Klien ${id} belum terhubung/belum memiliki IP!`, "terminal-fail");
+            return;
+        }
+
+        if(routerConfig.queue === "enabled") {
+            logTerminal(`[SPEEDTEST] Perangkat ${cl.name} (${cl.ip}) -> Speed Limit Aktif: ${cl.maxSpeed} Up / Down`, "terminal-success");
+        } else {
+            logTerminal(`[SPEEDTEST UNLIMITED] Perangkat ${cl.name} mendapat 100 Mbps (Simple Queue MikroTik belum diaktifkan!)`, "terminal-warn");
+        }
+    }
+
+    function evaluateTasks() {
+        let totalScore = 0;
+
+        // 1. Check VLAN
+        let isVlanOk = (routerConfig.vlan10 === "192.168.10.1/24" && routerConfig.vlan20 === "192.168.20.1/24" && routerConfig.vlan30 === "192.168.30.1/24");
+        updateChecklistState('vlan', isVlanOk);
+        if(isVlanOk) totalScore += 20;
+
+        // 2. Check Router DHCP & Queue
+        let isDhcpOk = (routerConfig.mgmt === "192.168.1.1/24" && routerConfig.dhcp === "enabled" && routerConfig.queue === "enabled");
+        updateChecklistState('dhcp', isDhcpOk);
+        updateNodeState('router-node', 'router-badge', isDhcpOk && isVlanOk);
+        if(isDhcpOk) totalScore += 20;
+
+        // 3. Check 4 APs
+        let apSuccessCount = 0;
+        for(let i=1; i<=4; i++) {
+            let ap = apConfigs[i];
+            let isApOk = (ap.ip === ap.targetIp && ap.dhcp === "disabled" && ap.ch2 === ap.targetCh2 && ap.ch5 === ap.targetCh5);
+            updateNodeState(`ap${i}-node`, `ap${i}-badge`, isApOk);
+            if(isApOk) apSuccessCount++;
+        }
+        document.getElementById('ap-progress').innerText = `(${apSuccessCount}/4)`;
+        updateChecklistState('aps', apSuccessCount === 4);
+        totalScore += (apSuccessCount * 10);
+
+        // 4. Check 47 Clients
+        let clientSuccessCount = 0;
+        let totalClients = Object.keys(clientConfigs).length;
+        for(let id in clientConfigs) {
+            let cl = clientConfigs[id];
+            let isClOk = (cl.ssid === cl.targetSsid && cl.ip.startsWith(cl.targetSubnet) && cl.mode === "dhcp");
+            updateNodeState(`client-${id}-node`, `${id}-badge`, isClOk);
+            if(isClOk) clientSuccessCount++;
+        }
+        document.getElementById('client-progress').innerText = `(${clientSuccessCount}/${totalClients})`;
+        updateChecklistState('clients', clientSuccessCount === totalClients);
+        totalScore += Math.round((clientSuccessCount / totalClients) * 20);
+
+        document.getElementById('total-score').innerText = `${totalScore} / 100`;
+
+        renderTopology();
+        updatePingTargets();
+    }
+
+    function updateChecklistState(key, isDone) {
+        let item = document.getElementById(`chk-${key}`);
+        let icon = document.getElementById(`icon-${key}`);
+        if(isDone) {
+            item.classList.add('completed');
+            icon.className = "fa-solid fa-circle-check";
+        } else {
+            item.classList.remove('completed');
+            icon.className = "fa-regular fa-circle-check";
+        }
+    }
+
+    function updateNodeState(nodeId, badgeId, isOk) {
+        let node = document.getElementById(nodeId);
+        let badge = document.getElementById(badgeId);
+        if(!node || !badge) return;
+
+        if(isOk) {
+            node.classList.add('configured');
+            badge.className = "status-badge online";
+            badge.innerHTML = '<i class="fa-solid fa-check"></i>';
+        } else {
+            node.classList.remove('configured');
+            badge.className = "status-badge";
+            badge.innerHTML = '!';
+        }
+    }
+
+    function updatePingTargets() {
+        const srcSel = document.getElementById('ping-source');
+        const dstSel = document.getElementById('ping-target');
+        
+        const curSrc = srcSel.value;
+        const curDst = dstSel.value;
+
+        let optionsHtml = '';
+        if(routerConfig.mgmt) optionsHtml += `<option value="router">Core Router (192.168.1.1)</option>`;
+        for(let i=1; i<=4; i++) {
+            if(apConfigs[i].ip) optionsHtml += `<option value="ap${i}">${apConfigs[i].name} (${apConfigs[i].ip})</option>`;
+        }
+        for(let k in clientConfigs) {
+            if(clientConfigs[k].ip) optionsHtml += `<option value="${k}">${clientConfigs[k].name} (${clientConfigs[k].ip})</option>`;
+        }
+
+        if(!optionsHtml) optionsHtml = `<option value="">-- Tidak ada IP Aktif --</option>`;
+
+        srcSel.innerHTML = optionsHtml;
+        dstSel.innerHTML = optionsHtml;
+
+        if(curSrc) srcSel.value = curSrc;
+        if(curDst) dstSel.value = curDst;
+    }
+
+    function runPingTest() {
+        let srcKey = document.getElementById('ping-source').value;
+        let dstKey = document.getElementById('ping-target').value;
+
+        if(!srcKey || !dstKey) {
+            logTerminal(`[ERROR] Pilih perangkat pengirim dan penerima!`, "terminal-fail");
+            return;
+        }
+
+        let srcName = srcKey, dstName = dstKey, dstIp = "";
+        if(srcKey === "router") srcName = "Core Router";
+        else if(srcKey.startsWith("ap")) srcName = apConfigs[srcKey.replace("ap","")].name;
+        else srcName = clientConfigs[srcKey].name;
+
+        if(dstKey === "router") { dstName = "Core Router"; dstIp = "192.168.1.1"; }
+        else if(dstKey.startsWith("ap")) { dstName = apConfigs[dstKey.replace("ap","")].name; dstIp = apConfigs[dstKey.replace("ap","")].ip; }
+        else { dstName = clientConfigs[dstKey].name; dstIp = clientConfigs[dstKey].ip; }
+
+        logTerminal(`\n> PING ${dstName} (${dstIp}) dari ${srcName}:`);
+        logTerminal(`Reply from ${dstIp}: bytes=32 time=2ms TTL=64`, "terminal-success");
+        logTerminal(`Reply from ${dstIp}: bytes=32 time=1ms TTL=64`, "terminal-success");
+        logTerminal(`Ping statistics: Sent = 2, Received = 2, Lost = 0 (0% loss).`, "terminal-success");
+    }
+
+    function resetAllConfigs() {
+        routerConfig = { mgmt: "", vlan10: "", vlan20: "", vlan30: "", dhcp: "disabled", queue: "disabled" };
+        for(let i=1; i<=4; i++) {
+            apConfigs[i].ip = apConfigs[i].targetIp;
+            apConfigs[i].dhcp = "enabled";
+            apConfigs[i].ch2 = "";
+            apConfigs[i].ch5 = "";
+        }
+        
+        initClientData();
+        renderClientNodes();
+
+        document.getElementById('lbl-router-ip').innerText = "Unconfigured";
+
+        logTerminal(`[SYSTEM] Simulasi direset ke kondisi awal.`, "terminal-warn");
+        evaluateTasks();
+    }
+
+    function logTerminal(msg, cls="") {
+        let box = document.getElementById('terminal-output');
+        box.innerHTML += `<div class="${cls}">${msg}</div>`;
+        box.scrollTop = box.scrollHeight;
+    }
+
+    // Inisialisasi awal saat halaman dimuat
+    window.onload = () => {
+        initClientData();
+        renderClientNodes();
+        setTimeout(() => {
+            evaluateTasks();
+        }, 300);
+    };
+</script>
+</body>
+</html>
