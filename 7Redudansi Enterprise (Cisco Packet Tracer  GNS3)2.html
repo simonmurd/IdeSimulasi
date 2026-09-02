@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Praktikum Jaringan - Redudansi Failover & Spanning Tree</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --cisco-blue: #005073;
+            --cisco-light-blue: #0284c7;
+            --cisco-accent: #06b6d4;
+            --bg-light: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+            --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-light); color: var(--text-dark); font-family: 'Inter', sans-serif; padding: 32px 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+        
+        .container { 
+            max-width: 1320px; 
+            margin: 0 auto; 
+            background-color: var(--card-bg); 
+            border-radius: 16px; 
+            box-shadow: var(--shadow-lg); 
+            overflow: hidden; 
+            border: 1px solid var(--border-color);
+        }
+        
+        /* HEADER */
+        header { 
+            background: linear-gradient(135deg, #003b54 0%, var(--cisco-blue) 100%); 
+            color: #fff; 
+            padding: 24px 32px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 3px solid var(--cisco-accent);
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .header-title { display: flex; align-items: center; gap: 16px; }
+        .header-title i { font-size: 28px; color: var(--cisco-accent); background: rgba(255,255,255,0.05); padding: 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .header-title h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.02em; }
+        .header-title p { font-size: 14px; color: #cbd5e1; font-weight: 400; }
+
+        .score-box { 
+            background: rgba(15, 23, 42, 0.3); 
+            padding: 12px 24px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            text-align: right; 
+            backdrop-filter: blur(8px);
+        }
+        .score-title { font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.05em; }
+        .score-value { font-size: 26px; font-weight: 700; color: var(--success-color); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+        /* TOPOLOGY AREA */
+        .topology-section { padding: 0; background-color: #ffffff; border-bottom: 1px solid var(--border-color); }
+        .section-header { padding: 20px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); background: #f8fafc; }
+        .section-header-title { font-weight: 600; color: var(--text-dark); font-size: 15px; display: flex; align-items: center; gap: 10px; }
+        .section-header-title i { color: var(--cisco-blue); font-size: 18px; }
+        
+        .topology-wrapper { width: 100%; overflow-x: auto; }
+        .topology-wrapper::-webkit-scrollbar { height: 8px; }
+        .topology-wrapper::-webkit-scrollbar-track { background: #f1f5f9; }
+        .topology-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .topology-wrapper::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .topology-canvas { position: relative; height: 600px; min-width: 900px; background-color: #f8fafc; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 28px 28px; overflow: hidden; }
+        .connections-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        
+        /* CABLES */
+        .wired-line { stroke: #cbd5e1; stroke-width: 3; transition: stroke 0.4s ease, opacity 0.4s ease; stroke-linecap: round; }
+        .wired-line.active { stroke: var(--success-color); stroke-width: 4; }
+        .wired-line.etherchannel { stroke: var(--cisco-accent); stroke-width: 8; stroke-dasharray: 12 4; animation: flowData 1s linear infinite; }
+        .wired-line.blocked { stroke: var(--warning-color); stroke-dasharray: 6 6; stroke-width: 3; }
+        .wired-line.offline { stroke: var(--danger-color); stroke-width: 2; opacity: 0.2; }
+        
+        @keyframes flowData { to { stroke-dashoffset: -32; } }
+
+        /* DEVICES */
+        .device-node { position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: center; cursor: pointer; user-select: none; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .device-node:hover { transform: translateY(-6px); }
+        .device-node:active { transform: scale(0.96); }
+        .device-node.offline { opacity: 0.5; filter: grayscale(100%); }
+        
+        .device-icon-box { width: 64px; height: 64px; background-color: #fff; border: 2px solid var(--border-color); border-radius: 14px; display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-sm); position: relative; transition: var(--transition-smooth); }
+        
+        /* Style untuk i (FontAwesome) & svg (Custom Icon Router) */
+        .device-icon-box i, .device-icon-box svg { font-size: 26px; color: var(--text-muted); transition: color 0.3s ease; }
+        .device-node:hover .device-icon-box { border-color: var(--cisco-light-blue); box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.15); }
+        
+        .device-node.configured .device-icon-box { border-color: var(--cisco-blue); }
+        .device-node.configured .device-icon-box i, 
+        .device-node.configured .device-icon-box svg { color: var(--cisco-blue); }
+        
+        .core-node .device-icon-box { width: 76px; height: 76px; background: #fff; border-radius: 18px; }
+        .core-node.configured .device-icon-box { border-color: var(--cisco-blue); background: #f0f9ff; }
+        .core-node.configured .device-icon-box i { font-size: 32px; }
+
+        .device-label { margin-top: 10px; font-size: 12px; font-weight: 600; background: rgba(255,255,255,0.95); padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 8px; text-align: center; line-height: 1.4; box-shadow: var(--shadow-sm); backdrop-filter: blur(4px); }
+        .device-ip { font-size: 11px; color: var(--text-muted); font-weight: 500; display: block; margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+        .device-node.configured .device-ip { color: var(--cisco-light-blue); font-weight: 600; }
+        
+        .status-badge { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; background-color: var(--danger-color); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: bold; box-shadow: var(--shadow-sm); transition: var(--transition-smooth); }
+        .status-badge.online { background-color: var(--success-color); }
+        .status-badge.standby { background-color: var(--warning-color); }
+
+        /* Coordinates */
+        #cloud-node { top: 5%; left: 50%; transform: translateX(-50%); }
+        #cloud-node:hover { transform: translateX(-50%) translateY(-6px); }
+        #r-main-node { top: 20%; left: 30%; transform: translateX(-50%); }
+        #r-main-node:hover { transform: translateX(-50%) translateY(-6px); }
+        #r-backup-node { top: 20%; left: 70%; transform: translateX(-50%); }
+        #r-backup-node:hover { transform: translateX(-50%) translateY(-6px); }
+        #core1-node { top: 42%; left: 30%; transform: translateX(-50%); }
+        #core1-node:hover { transform: translateX(-50%) translateY(-6px); }
+        #core2-node { top: 42%; left: 70%; transform: translateX(-50%); }
+        #core2-node:hover { transform: translateX(-50%) translateY(-6px); }
+        #sw1-node { top: 65%; left: 30%; transform: translateX(-50%); }
+        #sw1-node:hover { transform: translateX(-50%) translateY(-6px); }
+        #sw2-node { top: 65%; left: 70%; transform: translateX(-50%); }
+        #sw2-node:hover { transform: translateX(-50%) translateY(-6px); }
+        #pc1-node { top: 85%; left: 30%; transform: translateX(-50%); }
+        #pc1-node:hover { transform: translateX(-50%) translateY(-6px); }
+        #pc2-node { top: 85%; left: 70%; transform: translateX(-50%); }
+        #pc2-node:hover { transform: translateX(-50%) translateY(-6px); }
+
+        /* BOTTOM SECTION */
+        .lkpd-body { padding: 32px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px; background: #fff; }
+        .card { background: #fff; border: 1px solid var(--border-color); border-radius: 16px; padding: 28px; box-shadow: var(--shadow-sm); }
+        .card-title { font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        .card-title i { color: var(--cisco-blue); font-size: 20px; }
+        
+        /* CHECKLIST */
+        .checklist-group { display: flex; flex-direction: column; gap: 16px; }
+        .checklist-item { display: flex; flex-direction: column; background: #f8fafc; border: 1px solid var(--border-color); padding: 18px 20px; border-radius: 12px; transition: var(--transition-smooth); gap: 8px; }
+        .checklist-item:hover { border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
+        .checklist-item.completed { background: #f0fdf4; border-color: #bbf7d0; }
+        
+        .item-header { display: flex; align-items: center; justify-content: space-between; }
+        .item-info { display: flex; align-items: center; gap: 14px; font-size: 14px; font-weight: 600; color: var(--text-dark); }
+        .item-info i { font-size: 20px; color: var(--text-muted); transition: 0.3s; }
+        .checklist-item.completed .item-info i { color: var(--success-color); }
+        .item-points { font-size: 12px; font-weight: 700; background: #e2e8f0; color: #475569; padding: 4px 12px; border-radius: 20px; }
+        .checklist-item.completed .item-points { background: #dcfce7; color: #15803d; }
+        .item-desc { font-size: 13px; color: var(--text-muted); margin-left: 34px; line-height: 1.6; }
+
+        /* TERMINAL */
+        .terminal-container { border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-md); border: 1px solid #1e293b; background: #0f172a; }
+        .terminal-header { background: #1e293b; padding: 12px 20px; display: flex; align-items: center; gap: 8px; }
+        .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .terminal-dot.red { background: #ef4444; }
+        .terminal-dot.yellow { background: #f59e0b; }
+        .terminal-dot.green { background: #10b981; }
+        .terminal-title { margin-left: auto; margin-right: auto; color: #94a3b8; font-size: 13px; font-weight: 500; font-family: 'Inter', sans-serif; padding-right: 40px; }
+        
+        .terminal-box { color: #e2e8f0; font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 20px; height: 260px; overflow-y: auto; line-height: 1.7; }
+        
+        .terminal-box::-webkit-scrollbar { width: 8px; }
+        .terminal-box::-webkit-scrollbar-track { background: #0f172a; }
+        .terminal-box::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .terminal-box::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .terminal-time { color: #64748b; margin-right: 8px; }
+        .terminal-success { color: #34d399; } 
+        .terminal-fail { color: #f87171; } 
+        .terminal-warn { color: #fbbf24; }
+        .terminal-sys { color: #38bdf8; }
+        
+        /* BUTTONS */
+        .ping-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+        button { padding: 12px 20px; font-size: 14px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: var(--transition-smooth); display: flex; align-items: center; justify-content: center; gap: 10px; font-family: 'Inter', sans-serif; outline: none; }
+        button:focus-visible { box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.4); }
+        button:active { transform: scale(0.98); }
+        
+        .btn-cisco { background: var(--cisco-blue); color: #fff; border: 1px solid transparent; }
+        .btn-cisco:hover { background: #003b54; box-shadow: var(--shadow-md); }
+        .btn-secondary { background: #fff; color: var(--text-dark); border: 1px solid var(--border-color); }
+        .btn-secondary:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .btn-danger { background: var(--danger-color); color: #fff; border: 1px solid transparent; }
+        .btn-danger:hover { background: #dc2626; box-shadow: var(--shadow-md); }
+
+        /* MODALS (Glassmorphism) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,23,42,0.6); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 100; padding: 16px; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-overlay.active .cisco-modal { transform: scale(1) translateY(0); opacity: 1; }
+        
+        .cisco-modal { background: #fff; width: 100%; max-width: 460px; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); transform: scale(0.95) translateY(10px); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .modal-header { background: #002b40; color: #fff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--cisco-light-blue); }
+        .modal-header h3 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 12px; }
+        .modal-close { background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 24px; line-height: 1; padding: 4px; transition: var(--transition-smooth); }
+        .modal-close:hover { color: #fff; transform: rotate(90deg); }
+        
+        .modal-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+        .modal-body::-webkit-scrollbar { width: 6px; }
+        .modal-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        
+        .form-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .form-grid label { font-size: 13px; font-weight: 600; color: var(--text-dark); }
+        .form-grid input, .form-grid select { padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; font-family: inherit; transition: var(--transition-smooth); background: #f8fafc; color: var(--text-dark); width: 100%; }
+        .form-grid input:focus, .form-grid select:focus { outline: none; border-color: var(--cisco-light-blue); background: #fff; box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.1); }
+        
+        .modal-footer { padding: 20px 24px; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--border-color); }
+        
+        .badge-info { font-size: 13px; background: #f0f9ff; color: #0369a1; padding: 14px 16px; border-radius: 8px; margin-bottom: 24px; line-height: 1.6; border-left: 4px solid #0284c7; }
+
+        @media (max-width: 992px) {
+            .lkpd-body { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-title">
+            <i class="fa-solid fa-server"></i>
+            <div>
+                <h1>Redudansi Enterprise (Cisco Packet Tracer / GNS3)</h1>
+                <p>Simulasi arsitektur HSRP/VRRP, STP, dan EtherChannel untuk keandalan jaringan.</p>
+            </div>
+        </div>
+        <div class="score-box">
+            <div class="score-title">Nilai Praktikum</div>
+            <div class="score-value" id="total-score">0 / 100</div>
+        </div>
+    </header>
+
+    <div class="topology-section">
+        <div class="section-header">
+            <span class="section-header-title"><i class="fa-solid fa-hand-pointer"></i> Interaksi Topologi (Klik Perangkat)</span>
+            <button class="btn-secondary" style="font-size: 13px; padding: 8px 16px;" onclick="resetAllConfigs()">
+                <i class="fa-solid fa-rotate-right"></i> Reset Lab
+            </button>
+        </div>
+        
+        <div class="topology-wrapper">
+            <div class="topology-canvas" id="canvas-area">
+                <svg class="connections-svg" id="svg-connections"></svg>
+
+                <!-- Nodes -->
+                <div class="device-node" id="cloud-node">
+                    <div class="device-icon-box"><i class="fa-solid fa-cloud"></i></div>
+                    <div class="device-label">Internet<br><span class="device-ip">8.8.8.8</span></div>
+                </div>
+
+                <div class="device-node core-node" id="r-main-node" onclick="openModal('router-modal', 'main')">
+                    <div class="device-icon-box">
+                        <!-- CUSTOM SVG CISCO ROUTER ICON -->
+                        <svg viewBox="0 0 64 64" width="34" height="34" stroke="currentColor" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                            <ellipse cx="32" cy="18" rx="24" ry="10" />
+                            <path d="M8 18 v28 c0 5.5 10.7 10 24 10 s24-4.5 24-10 V18" />
+                            <path d="M32 10 v16 M24 18 h16" />
+                            <path d="M29 13 l3 -3 l3 3 M29 23 l3 3 l3 -3 M27 15 l-3 3 l3 3 M37 15 l3 3 l-3 3" />
+                        </svg>
+                        <div class="status-badge" id="r-main-badge">!</div>
+                    </div>
+                    <div class="device-label">Router Main<br><span class="device-ip" id="lbl-r-main">HSRP Disabled</span></div>
+                </div>
+
+                <div class="device-node core-node" id="r-backup-node" onclick="openModal('router-modal', 'backup')">
+                    <div class="device-icon-box">
+                        <!-- CUSTOM SVG CISCO ROUTER ICON -->
+                        <svg viewBox="0 0 64 64" width="34" height="34" stroke="currentColor" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                            <ellipse cx="32" cy="18" rx="24" ry="10" />
+                            <path d="M8 18 v28 c0 5.5 10.7 10 24 10 s24-4.5 24-10 V18" />
+                            <path d="M32 10 v16 M24 18 h16" />
+                            <path d="M29 13 l3 -3 l3 3 M29 23 l3 3 l3 -3 M27 15 l-3 3 l3 3 M37 15 l3 3 l-3 3" />
+                        </svg>
+                        <div class="status-badge" id="r-backup-badge">!</div>
+                    </div>
+                    <div class="device-label">Router Backup<br><span class="device-ip" id="lbl-r-backup">HSRP Disabled</span></div>
+                </div>
+
+                <div class="device-node" id="core1-node" onclick="openModal('core-modal', 'c1')">
+                    <div class="device-icon-box"><i class="fa-solid fa-network-wired"></i><div class="status-badge" id="core1-badge">!</div></div>
+                    <div class="device-label">Switch Core 1<br><span class="device-ip" id="lbl-core1">Default</span></div>
+                </div>
+
+                <div class="device-node" id="core2-node" onclick="openModal('core-modal', 'c2')">
+                    <div class="device-icon-box"><i class="fa-solid fa-network-wired"></i><div class="status-badge" id="core2-badge">!</div></div>
+                    <div class="device-label">Switch Core 2<br><span class="device-ip" id="lbl-core2">Default</span></div>
+                </div>
+
+                <div class="device-node" id="sw1-node" onclick="openModal('access-modal', 'sw1')">
+                    <div class="device-icon-box"><i class="fa-solid fa-sitemap"></i><div class="status-badge" id="sw1-badge">!</div></div>
+                    <div class="device-label">Switch Access 1<br><span class="device-ip" id="lbl-sw1">STP: Off</span></div>
+                </div>
+
+                <div class="device-node" id="sw2-node" onclick="openModal('access-modal', 'sw2')">
+                    <div class="device-icon-box"><i class="fa-solid fa-sitemap"></i><div class="status-badge" id="sw2-badge">!</div></div>
+                    <div class="device-label">Switch Access 2<br><span class="device-ip" id="lbl-sw2">STP: Off</span></div>
+                </div>
+
+                <div class="device-node" id="pc1-node" onclick="openModal('client-modal', 'pc1')">
+                    <div class="device-icon-box"><i class="fa-solid fa-desktop"></i><div class="status-badge" id="pc1-badge">!</div></div>
+                    <div class="device-label">Client A<br><span class="device-ip" id="lbl-pc1">IP: 192.168.1.10</span></div>
+                </div>
+
+                <div class="device-node" id="pc2-node" onclick="openModal('client-modal', 'pc2')">
+                    <div class="device-icon-box"><i class="fa-solid fa-desktop"></i><div class="status-badge" id="pc2-badge">!</div></div>
+                    <div class="device-label">Client B<br><span class="device-ip" id="lbl-pc2">IP: 192.168.1.20</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="lkpd-body">
+        <div class="card">
+            <div class="card-title"><i class="fa-solid fa-list-check"></i> Materi & Evaluasi Lab</div>
+            <div class="checklist-group">
+                <div class="checklist-item" id="chk-hsrp">
+                    <div class="item-header">
+                        <div class="item-info"><i class="fa-regular fa-circle-check" id="icon-hsrp"></i><span>1. HSRP / VRRP (Virtual IP)</span></div>
+                        <span class="item-points">30 Poin</span>
+                    </div>
+                    <div class="item-desc">Pengujian failover otomatis saat Router Main dimatikan. Target VIP: 192.168.1.254, R-Main Priority > 100.</div>
+                </div>
+
+                <div class="checklist-item" id="chk-ether">
+                    <div class="item-header">
+                        <div class="item-info"><i class="fa-regular fa-circle-check" id="icon-ether"></i><span>2. EtherChannel (LACP)</span></div>
+                        <span class="item-points">20 Poin</span>
+                    </div>
+                    <div class="item-desc">Menggabungkan 2 kabel fisik antar-switch (Core 1 & 2) untuk menambah bandwidth menggunakan LACP.</div>
+                </div>
+
+                <div class="checklist-item" id="chk-stp">
+                    <div class="item-header">
+                        <div class="item-info"><i class="fa-regular fa-circle-check" id="icon-stp"></i><span>3. Spanning Tree Protocol (STP)</span></div>
+                        <span class="item-points">30 Poin</span>
+                    </div>
+                    <div class="item-desc">Mencegah network loop pada jalur fisik yang melingkar. Aktifkan STP pada Switch Access dan set Root Primary di Core 1.</div>
+                </div>
+
+                <div class="checklist-item" id="chk-client">
+                    <div class="item-header">
+                        <div class="item-info"><i class="fa-regular fa-circle-check" id="icon-client"></i><span>4. Konfigurasi Gateway Client</span></div>
+                        <span class="item-points">20 Poin</span>
+                    </div>
+                    <div class="item-desc">Client harus mengarah ke Virtual IP HSRP (192.168.1.254) agar tetap terhubung saat failover.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fa-solid fa-terminal"></i> Terminal Ping & System Log</div>
+            
+            <div class="terminal-container">
+                <div class="terminal-header">
+                    <div class="terminal-dot red"></div>
+                    <div class="terminal-dot yellow"></div>
+                    <div class="terminal-dot green"></div>
+                    <div class="terminal-title">bash - ping test</div>
+                </div>
+                <div class="terminal-box" id="terminal-output">
+                    <!-- Logs will appear here -->
+                </div>
+            </div>
+
+            <div class="ping-controls">
+                <button class="btn-cisco" onclick="runPingTest()"><i class="fa-solid fa-wifi"></i> Ping Internet (8.8.8.8)</button>
+                <button class="btn-danger" id="btn-power" onclick="toggleRouterPower()"><i class="fa-solid fa-power-off"></i> Matikan Router Main</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="router-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3>
+                <!-- Custom SVG Icon Cisco Router di Header -->
+                <svg viewBox="0 0 64 64" width="22" height="22" stroke="currentColor" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                    <ellipse cx="32" cy="18" rx="24" ry="10" />
+                    <path d="M8 18 v28 c0 5.5 10.7 10 24 10 s24-4.5 24-10 V18" />
+                    <path d="M32 10 v16 M24 18 h16" />
+                    <path d="M29 13 l3 -3 l3 3 M29 23 l3 3 l3 -3 M27 15 l-3 3 l3 3 M37 15 l3 3 l-3 3" />
+                </svg> 
+                Konfigurasi HSRP Router
+            </h3>
+            <button class="modal-close" onclick="closeModal('router-modal')" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="r-id">
+            <div class="badge-info">Konfigurasi Virtual Router Redundancy. Standar VIP yang digunakan adalah <b>192.168.1.254</b>.</div>
+            <div class="form-grid">
+                <label for="cfg-r-vip">HSRP Virtual IP (VIP)</label>
+                <input type="text" id="cfg-r-vip" placeholder="Contoh: 192.168.1.254">
+            </div>
+            <div class="form-grid">
+                <label for="cfg-r-prio">Priority (Default 100, Makin besar = Active)</label>
+                <input type="number" id="cfg-r-prio" placeholder="100">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('router-modal')">Batal</button>
+            <button class="btn-cisco" onclick="saveRouter()">Simpan Konfigurasi</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="core-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-network-wired"></i> Konfigurasi Switch Core</h3>
+            <button class="modal-close" onclick="closeModal('core-modal')" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="c-id">
+            <div class="form-grid">
+                <label for="cfg-c-ether">EtherChannel / Port-Channel Mode</label>
+                <select id="cfg-c-ether">
+                    <option value="none">Disabled (No Aggregation)</option>
+                    <option value="lacp">LACP (Active)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label for="cfg-c-stp">Spanning Tree Bridge Priority</label>
+                <select id="cfg-c-stp">
+                    <option value="32768">32768 (Default)</option>
+                    <option value="4096">4096 (Primary Root)</option>
+                    <option value="8192">8192 (Secondary Root)</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('core-modal')">Batal</button>
+            <button class="btn-cisco" onclick="saveCore()">Simpan Konfigurasi</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="access-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-sitemap"></i> Switch Access (Spanning Tree)</h3>
+            <button class="modal-close" onclick="closeModal('access-modal')" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="a-id">
+            <div class="badge-info">Jika jalur fisik melingkar dan STP mati, akan terjadi <b>Broadcast Storm (Loop)</b> yang melumpuhkan jaringan.</div>
+            <div class="form-grid">
+                <label for="cfg-a-stp">Status Spanning Tree Protocol (802.1D)</label>
+                <select id="cfg-a-stp">
+                    <option value="false">Disabled</option>
+                    <option value="true">Enabled (Prevent Loop)</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('access-modal')">Batal</button>
+            <button class="btn-cisco" onclick="saveAccess()">Simpan Konfigurasi</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="client-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-desktop"></i> Konfigurasi IP Client</h3>
+            <button class="modal-close" onclick="closeModal('client-modal')" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="pc-id">
+            <div class="form-grid">
+                <label for="cfg-pc-gw">Default Gateway (Arahkan ke VIP)</label>
+                <input type="text" id="cfg-pc-gw" placeholder="192.168.1.xxx">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('client-modal')">Batal</button>
+            <button class="btn-cisco" onclick="saveClient()">Simpan Konfigurasi</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let db = {
+        r: { main: { power: true, vip: '', prio: 100 }, backup: { power: true, vip: '', prio: 100 } },
+        c: { c1: { ether: 'none', stp: '32768' }, c2: { ether: 'none', stp: '32768' } },
+        a: { sw1: { stp: 'false' }, sw2: { stp: 'false' } },
+        pc: { pc1: { gw: '' }, pc2: { gw: '' } }
+    };
+
+    function openModal(modalId, deviceId) {
+        if(modalId === 'router-modal') {
+            document.getElementById('r-id').value = deviceId;
+            document.getElementById('cfg-r-vip').value = db.r[deviceId].vip;
+            document.getElementById('cfg-r-prio').value = db.r[deviceId].prio;
+        } else if(modalId === 'core-modal') {
+            document.getElementById('c-id').value = deviceId;
+            document.getElementById('cfg-c-ether').value = db.c[deviceId].ether;
+            document.getElementById('cfg-c-stp').value = db.c[deviceId].stp;
+        } else if(modalId === 'access-modal') {
+            document.getElementById('a-id').value = deviceId;
+            document.getElementById('cfg-a-stp').value = db.a[deviceId].stp;
+        } else if(modalId === 'client-modal') {
+            document.getElementById('pc-id').value = deviceId;
+            document.getElementById('cfg-pc-gw').value = db.pc[deviceId].gw;
+        }
+        document.getElementById(modalId).classList.add('active');
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function getTimestamp() {
+        let now = new Date();
+        return now.toLocaleTimeString('id-ID', { hour12: false });
+    }
+
+    function logTerminal(msg, cls="") {
+        let box = document.getElementById('terminal-output');
+        let time = getTimestamp();
+        box.innerHTML += `<div class="${cls}"><span class="terminal-time">[${time}]</span> ${msg}</div>`;
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function saveRouter() {
+        let id = document.getElementById('r-id').value;
+        db.r[id].vip = document.getElementById('cfg-r-vip').value.trim();
+        db.r[id].prio = parseInt(document.getElementById('cfg-r-prio').value) || 100;
+        logTerminal(`[ROUTER ${id.toUpperCase()}] Configured HSRP VIP: ${db.r[id].vip || 'None'}, Priority: ${db.r[id].prio}`, 'terminal-sys');
+        closeModal('router-modal'); evaluate();
+    }
+
+    function saveCore() {
+        let id = document.getElementById('c-id').value;
+        db.c[id].ether = document.getElementById('cfg-c-ether').value;
+        db.c[id].stp = document.getElementById('cfg-c-stp').value;
+        logTerminal(`[SWITCH ${id.toUpperCase()}] Configured Port-Channel: ${db.c[id].ether}, STP Priority: ${db.c[id].stp}`, 'terminal-sys');
+        closeModal('core-modal'); evaluate();
+    }
+
+    function saveAccess() {
+        let id = document.getElementById('a-id').value;
+        db.a[id].stp = document.getElementById('cfg-a-stp').value;
+        logTerminal(`[ACCESS ${id.toUpperCase()}] Spanning Tree set to: ${db.a[id].stp === 'true' ? 'Enabled' : 'Disabled'}`, 'terminal-sys');
+        closeModal('access-modal'); evaluate();
+    }
+
+    function saveClient() {
+        let id = document.getElementById('pc-id').value;
+        db.pc[id].gw = document.getElementById('cfg-pc-gw').value.trim();
+        logTerminal(`[CLIENT ${id.toUpperCase()}] Default Gateway set to: ${db.pc[id].gw || 'None'}`, 'terminal-sys');
+        closeModal('client-modal'); evaluate();
+    }
+
+    function toggleRouterPower() {
+        db.r.main.power = !db.r.main.power;
+        let btn = document.getElementById('btn-power');
+        if(db.r.main.power) {
+            btn.innerHTML = '<i class="fa-solid fa-power-off"></i> Matikan Router Main';
+            btn.className = 'btn-danger';
+            logTerminal('[SYSTEM] Router Main Dihidupkan. Menunggu HSRP Preempt...', 'terminal-warn');
+        } else {
+            btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Hidupkan Router Main';
+            btn.className = 'btn-cisco';
+            logTerminal('[SYSTEM] Router Main DIMATIKAN! Failover HSRP dipicu...', 'terminal-fail');
+        }
+        evaluate();
+    }
+
+    function getLineHtml(id1, id2, statusClass) {
+        const e1 = document.getElementById(id1).getBoundingClientRect();
+        const e2 = document.getElementById(id2).getBoundingClientRect();
+        const cvs = document.getElementById('canvas-area').getBoundingClientRect();
+        const x1 = e1.left - cvs.left + e1.width/2, y1 = e1.top - cvs.top + e1.height/2;
+        const x2 = e2.left - cvs.left + e2.width/2, y2 = e2.top - cvs.top + e2.height/2;
+        return `<line class="wired-line ${statusClass}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`;
+    }
+
+    function evaluate() {
+        let score = 0;
+
+        // 1. HSRP Evaluasi
+        let rMainActive = (db.r.main.vip === '192.168.1.254' && db.r.main.prio > db.r.backup.prio);
+        let rBackupStby = (db.r.backup.vip === '192.168.1.254');
+        let hsrpOk = rMainActive && rBackupStby;
+        updateChecklist('hsrp', hsrpOk);
+        if(hsrpOk) score += 30;
+
+        document.getElementById('r-main-node').classList.toggle('offline', !db.r.main.power);
+        
+        let mRole = "HSRP Off"; let bRole = "HSRP Off";
+        if(db.r.main.vip === '192.168.1.254') mRole = (db.r.main.prio > db.r.backup.prio) ? "Active" : "Standby";
+        if(db.r.backup.vip === '192.168.1.254') bRole = (db.r.backup.prio > db.r.main.prio) ? "Active" : "Standby";
+        
+        if(!db.r.main.power && bRole === "Standby") bRole = "Active (Failover)";
+
+        document.getElementById('lbl-r-main').innerText = db.r.main.power ? mRole : "OFFLINE";
+        document.getElementById('lbl-r-backup').innerText = bRole;
+        updateNode('r-main', rMainActive && db.r.main.power, db.r.main.power ? '' : 'offline');
+        updateNode('r-backup', rBackupStby || bRole.includes('Active'), bRole.includes('Standby') ? 'standby' : '');
+
+        // 2. EtherChannel
+        let etherOk = (db.c.c1.ether === 'lacp' && db.c.c2.ether === 'lacp');
+        updateChecklist('ether', etherOk);
+        if(etherOk) score += 20;
+
+        // 3. STP
+        let stpOk = (db.c.c1.stp === '4096' && db.a.sw1.stp === 'true' && db.a.sw2.stp === 'true');
+        updateChecklist('stp', stpOk);
+        if(stpOk) score += 30;
+        document.getElementById('lbl-core1').innerText = db.c.c1.stp === '4096' ? "Root Bridge" : "Default";
+        document.getElementById('lbl-sw1').innerText = db.a.sw1.stp === 'true' ? "STP: On" : "STP: Off";
+        document.getElementById('lbl-sw2').innerText = db.a.sw2.stp === 'true' ? "STP: On" : "STP: Off";
+        updateNode('core1', db.c.c1.stp === '4096');
+        updateNode('sw1', db.a.sw1.stp === 'true');
+        updateNode('sw2', db.a.sw2.stp === 'true');
+
+        // 4. Client
+        let gwOk = (db.pc.pc1.gw === '192.168.1.254' && db.pc.pc2.gw === '192.168.1.254');
+        updateChecklist('client', gwOk);
+        if(gwOk) score += 20;
+        document.getElementById('lbl-pc1').innerText = `GW: ${db.pc.pc1.gw || 'None'}`;
+        document.getElementById('lbl-pc2').innerText = `GW: ${db.pc.pc2.gw || 'None'}`;
+        updateNode('pc1', db.pc.pc1.gw === '192.168.1.254');
+        updateNode('pc2', db.pc.pc2.gw === '192.168.1.254');
+
+        document.getElementById('total-score').innerText = `${score} / 100`;
+        renderSVG(etherOk, stpOk);
+    }
+
+    function renderSVG(etherOk, stpOk) {
+        let svg = '';
+        let rMainPower = db.r.main.power ? 'active' : 'offline';
+        
+        svg += getLineHtml('cloud-node', 'r-main-node', rMainPower);
+        svg += getLineHtml('cloud-node', 'r-backup-node', 'active');
+        svg += getLineHtml('r-main-node', 'r-backup-node', rMainPower);
+        svg += getLineHtml('r-main-node', 'core1-node', rMainPower);
+        svg += getLineHtml('r-main-node', 'core2-node', rMainPower);
+        svg += getLineHtml('r-backup-node', 'core1-node', 'active');
+        svg += getLineHtml('r-backup-node', 'core2-node', 'active');
+        
+        svg += getLineHtml('core1-node', 'core2-node', etherOk ? 'etherchannel' : 'active');
+        
+        svg += getLineHtml('core1-node', 'sw1-node', 'active');
+        svg += getLineHtml('core2-node', 'sw2-node', 'active');
+        
+        // STP Loop Path
+        let loopStatus = 'active';
+        if(stpOk) loopStatus = 'blocked'; 
+        else if (db.a.sw1.stp === 'false' && db.a.sw2.stp === 'false') loopStatus = 'active';
+        
+        svg += getLineHtml('sw1-node', 'sw2-node', loopStatus);
+        
+        svg += getLineHtml('sw1-node', 'pc1-node', db.pc.pc1.gw ? 'active' : '');
+        svg += getLineHtml('sw2-node', 'pc2-node', db.pc.pc2.gw ? 'active' : '');
+
+        document.getElementById('svg-connections').innerHTML = svg;
+    }
+
+    function runPingTest() {
+        let gw = db.pc.pc1.gw;
+        logTerminal(`\n> PING 8.8.8.8 dari Client A...`, 'terminal-sys');
+
+        if(db.a.sw1.stp === 'false' || db.a.sw2.stp === 'false') {
+            logTerminal(`[BROADCAST STORM] Jaringan lumpuh karena loop fisik! Aktifkan STP.`, 'terminal-fail');
+            return;
+        }
+
+        if(gw !== '192.168.1.254') {
+            logTerminal(`Request timed out. (Gateway salah, tidak mengarah ke VIP)`, 'terminal-fail');
+            return;
+        }
+
+        let isMainActive = (db.r.main.power && db.r.main.vip === '192.168.1.254');
+        let isBackupActive = (db.r.backup.vip === '192.168.1.254');
+
+        if(isMainActive) {
+            setTimeout(() => { logTerminal(`Reply from 8.8.8.8: bytes=32 time=4ms (Via Router Main)`, 'terminal-success'); }, 300);
+        } else if(isBackupActive) {
+            setTimeout(() => { logTerminal(`Reply from 8.8.8.8: bytes=32 time=6ms (Via Router Backup - Failover Success!)`, 'terminal-warn'); }, 300);
+        } else {
+            setTimeout(() => { logTerminal(`Destination Host Unreachable. (HSRP VIP Down)`, 'terminal-fail'); }, 300);
+        }
+    }
+
+    function updateChecklist(key, isDone) {
+        let el = document.getElementById(`chk-${key}`);
+        let ic = document.getElementById(`icon-${key}`);
+        if(isDone) {
+            el.classList.add('completed'); ic.className = 'fa-solid fa-circle-check';
+        } else {
+            el.classList.remove('completed'); ic.className = 'fa-regular fa-circle-check';
+        }
+    }
+
+    function updateNode(nodePre, isOk, extraClass = '') {
+        let node = document.getElementById(`${nodePre}-node`);
+        let badge = document.getElementById(`${nodePre}-badge`);
+        if(isOk) {
+            node.classList.add('configured');
+            badge.className = `status-badge ${extraClass || 'online'}`;
+            badge.innerHTML = '<i class="fa-solid fa-check"></i>';
+        } else {
+            node.classList.remove('configured');
+            badge.className = `status-badge ${extraClass}`;
+            badge.innerHTML = '!';
+        }
+    }
+
+    function resetAllConfigs() {
+        db = {
+            r: { main: { power: true, vip: '', prio: 100 }, backup: { power: true, vip: '', prio: 100 } },
+            c: { c1: { ether: 'none', stp: '32768' }, c2: { ether: 'none', stp: '32768' } },
+            a: { sw1: { stp: 'false' }, sw2: { stp: 'false' } },
+            pc: { pc1: { gw: '' }, pc2: { gw: '' } }
+        };
+        let btn = document.getElementById('btn-power');
+        btn.innerHTML = '<i class="fa-solid fa-power-off"></i> Matikan Router Main';
+        btn.className = 'btn-danger';
+        logTerminal('[SYSTEM] Konfigurasi direset ke awal.', 'terminal-warn');
+        evaluate();
+    }
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => evaluate(), 100);
+    });
+    
+    setTimeout(() => {
+        logTerminal('[SYSTEM] Inisialisasi Topologi Redudansi...', 'terminal-sys');
+        evaluate();
+    }, 300);
+</script>
+</body>
+</html>
