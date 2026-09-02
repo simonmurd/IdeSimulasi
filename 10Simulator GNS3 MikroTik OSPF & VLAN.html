@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Praktikum Jaringan - MikroTik GNS3 UKK</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            /* Menyesuaikan tema warna MikroTik / Netadmin */
+            --mk-blue: #0f172a;
+            --mk-accent: #3b82f6;
+            --mk-light-blue: #60a5fa;
+            --bg-light: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-light); color: var(--text-dark); font-family: 'Inter', sans-serif; padding: 32px 16px; line-height: 1.5; }
+        
+        .container { max-width: 1320px; margin: 0 auto; background-color: var(--card-bg); border-radius: 16px; box-shadow: var(--shadow-lg); overflow: hidden; border: 1px solid var(--border-color); }
+        
+        /* HEADER */
+        header { background: linear-gradient(135deg, #1e293b 0%, var(--mk-blue) 100%); color: #fff; padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--mk-accent); }
+        .header-title { display: flex; align-items: center; gap: 16px; }
+        .header-title i { font-size: 28px; color: var(--mk-accent); background: rgba(255,255,255,0.05); padding: 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .header-title h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+        .header-title p { font-size: 14px; color: #cbd5e1; }
+
+        .score-box { background: rgba(15, 23, 42, 0.5); padding: 12px 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: right; }
+        .score-title { font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.05em; }
+        .score-value { font-size: 26px; font-weight: 700; color: var(--success-color); font-family: 'JetBrains Mono', monospace; }
+
+        /* TOPOLOGY AREA */
+        .topology-section { background-color: #ffffff; border-bottom: 1px solid var(--border-color); }
+        .section-header { padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); background: #f8fafc; }
+        .section-header-title { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 10px; }
+        
+        .topology-wrapper { width: 100%; overflow-x: auto; }
+        .topology-canvas { position: relative; height: 550px; min-width: 900px; background-color: #f8fafc; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 28px 28px; overflow: hidden; }
+        .connections-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        
+        /* CABLES & DEVICES */
+        .wired-line { stroke: #cbd5e1; stroke-width: 3; transition: stroke 0.4s ease, opacity 0.4s ease; stroke-linecap: round; }
+        .wired-line.active { stroke: var(--success-color); stroke-width: 4; }
+        .wired-line.trunk { stroke: var(--mk-accent); stroke-width: 6; stroke-dasharray: 8 4; animation: flowData 1s linear infinite; }
+        .wired-line.vlan10 { stroke: #8b5cf6; stroke-width: 4; }
+        .wired-line.vlan20 { stroke: #f97316; stroke-width: 4; }
+        .wired-line.offline { stroke: var(--danger-color); stroke-width: 2; opacity: 0.2; }
+        @keyframes flowData { to { stroke-dashoffset: -24; } }
+
+        .device-node { position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.25s; }
+        .device-node:hover { transform: translateY(-6px); }
+        .device-icon-box { width: 64px; height: 64px; background-color: #fff; border: 2px solid var(--border-color); border-radius: 14px; display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-sm); position: relative; }
+        .device-icon-box i { font-size: 26px; color: var(--text-muted); }
+        .core-node .device-icon-box { width: 72px; height: 72px; border-radius: 18px; }
+        
+        .device-label { margin-top: 10px; font-size: 12px; font-weight: 600; background: rgba(255,255,255,0.95); padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 8px; text-align: center; }
+        .device-ip { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; display: block; margin-top: 4px; }
+        .status-badge { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; background-color: var(--danger-color); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: bold; }
+        .status-badge.online { background-color: var(--success-color); }
+
+        /* Koordinat Device Vertikal GNS3 */
+        #cloud-node { top: 5%; left: 50%; transform: translateX(-50%); }
+        #r-pusat-node { top: 25%; left: 50%; transform: translateX(-50%); }
+        #r-cabang-node { top: 48%; left: 50%; transform: translateX(-50%); }
+        #switch-node { top: 70%; left: 50%; transform: translateX(-50%); }
+        #vpcs-guru-node { top: 85%; left: 30%; transform: translateX(-50%); }
+        #vpcs-siswa-node { top: 85%; left: 70%; transform: translateX(-50%); }
+
+        /* BOTTOM SECTION */
+        .lkpd-body { padding: 32px; display: grid; grid-template-columns: 1fr 1.2fr; gap: 32px; background: #fff; }
+        .card { background: #fff; border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; box-shadow: var(--shadow-sm); }
+        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        
+        .checklist-item { display: flex; align-items: center; background: #f8fafc; border: 1px solid var(--border-color); padding: 14px 16px; border-radius: 10px; margin-bottom: 12px; transition: 0.3s; gap: 12px; }
+        .checklist-item.completed { background: #f0fdf4; border-color: #bbf7d0; }
+        .checklist-item i { font-size: 20px; color: var(--text-muted); }
+        .checklist-item.completed i { color: var(--success-color); }
+        .checklist-text { font-size: 13px; font-weight: 600; color: var(--text-dark); flex: 1; }
+
+        /* TERMINAL */
+        .terminal-container { border-radius: 12px; overflow: hidden; border: 1px solid #1e293b; background: #0f172a; height: 100%; display: flex; flex-direction: column; }
+        .terminal-header { background: #1e293b; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .terminal-tabs { display: flex; gap: 8px; }
+        .tab-btn { background: #334155; color: #94a3b8; border: none; padding: 4px 12px; font-size: 11px; border-radius: 4px; cursor: pointer; font-family: 'JetBrains Mono'; font-weight: bold;}
+        .tab-btn.active { background: var(--mk-accent); color: #fff; }
+        
+        .terminal-box { color: #e2e8f0; font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 16px; flex: 1; overflow-y: auto; line-height: 1.6; height: 200px;}
+        .terminal-success { color: #34d399; } .terminal-fail { color: #f87171; } .terminal-warn { color: #fbbf24; } .terminal-cmd { color: #fff; font-weight: bold; }
+        
+        .cli-input-area { background: #080f1c; padding: 12px 16px; display: flex; align-items: center; gap: 10px; border-top: 1px solid #1e293b; }
+        .cli-prompt { color: #38bdf8; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; white-space: nowrap; }
+        #cli-cmd-input { background: transparent; border: none; outline: none; color: #e2e8f0; font-family: 'JetBrains Mono', monospace; font-size: 13px; width: 100%; }
+
+        .btn-controls { display: flex; gap: 12px; margin-top: 16px; }
+        button { padding: 10px 16px; font-size: 13px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .btn-primary { background: var(--mk-accent); color: #fff; } .btn-primary:hover { background: #2563eb; }
+
+        /* MODALS */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,23,42,0.7); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 100; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .mk-modal { background: #fff; width: 100%; max-width: 500px; border-radius: 16px; overflow: hidden; transform: scale(0.95); transition: 0.3s; }
+        .modal-overlay.active .mk-modal { transform: scale(1); }
+        .modal-header { background: #1e293b; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-close { background: none; color: #fff; font-size: 24px; cursor: pointer; border: none; }
+        .modal-body { padding: 24px; }
+        .form-grid { margin-bottom: 16px; }
+        .form-grid label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        .form-grid select { width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: #f8fafc; }
+        .modal-footer { padding: 16px 24px; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--border-color); }
+        
+        .pro-hint-box { background: #0f172a; border-radius: 8px; padding: 16px; margin-top: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
+        .pro-hint-title { font-size: 11px; text-transform: uppercase; color: #38bdf8; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;}
+        .pro-hint-code { color: #a5b4fc; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; white-space: pre-wrap; line-height: 1.5; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-title">
+            <i class="fa-solid fa-network-wired"></i>
+            <div>
+                <h1>Simulator GNS3: MikroTik OSPF & VLAN (UKK)</h1>
+                <p>Uji coba Routing Dinamis, VLAN Trunking, dan Bandwidth Management</p>
+            </div>
+        </div>
+        <div class="score-box">
+            <div class="score-title">Progress Lab</div>
+            <div class="score-value" id="total-score">0 / 100</div>
+        </div>
+    </header>
+
+    <div class="topology-section">
+        <div class="section-header">
+            <span class="section-header-title"><i class="fa-solid fa-project-diagram"></i> Network Workspace (GNS3)</span>
+            <button class="btn-primary" onclick="location.reload()" style="padding: 8px 12px;"><i class="fa-solid fa-rotate-right"></i> Reset Lab</button>
+        </div>
+        
+        <div class="topology-wrapper">
+            <div class="topology-canvas" id="canvas-area">
+                <svg class="connections-svg" id="svg-connections"></svg>
+
+                <div class="device-node" id="cloud-node">
+                    <div class="device-icon-box"><i class="fa-solid fa-cloud"></i></div>
+                    <div class="device-label">NAT (Internet)<br><span class="device-ip">Gateway: 8.8.8.8</span></div>
+                </div>
+
+                <div class="device-node core-node" id="r-pusat-node" onclick="openModal('pusat-modal')">
+                    <div class="device-icon-box"><i class="fa-solid fa-hdd"></i><div class="status-badge" id="r-pusat-badge">!</div></div>
+                    <div class="device-label">Router Pusat (CHR)<br><span class="device-ip" id="lbl-pusat">Belum Dikonfigurasi</span></div>
+                </div>
+
+                <div class="device-node core-node" id="r-cabang-node" onclick="openModal('cabang-modal')">
+                    <div class="device-icon-box"><i class="fa-solid fa-hdd"></i><div class="status-badge" id="r-cabang-badge">!</div></div>
+                    <div class="device-label">Router Cabang (CHR)<br><span class="device-ip" id="lbl-cabang">Belum Dikonfigurasi</span></div>
+                </div>
+
+                <div class="device-node" id="switch-node" onclick="openModal('switch-modal')">
+                    <div class="device-icon-box"><i class="fa-solid fa-exchange-alt"></i><div class="status-badge" id="switch-badge">!</div></div>
+                    <div class="device-label">Ethernet Switch<br><span class="device-ip" id="lbl-switch">Unmanaged</span></div>
+                </div>
+
+                <div class="device-node" id="vpcs-guru-node">
+                    <div class="device-icon-box" style="border-color: #8b5cf6;"><i class="fa-solid fa-chalkboard-user" style="color: #8b5cf6;"></i><div class="status-badge" id="guru-badge">!</div></div>
+                    <div class="device-label">VPCS Guru<br><span class="device-ip" id="lbl-guru">No IP</span></div>
+                </div>
+
+                <div class="device-node" id="vpcs-siswa-node">
+                    <div class="device-icon-box" style="border-color: #f97316;"><i class="fa-solid fa-users" style="color: #f97316;"></i><div class="status-badge" id="siswa-badge">!</div></div>
+                    <div class="device-label">VPCS Siswa<br><span class="device-ip" id="lbl-siswa">No IP</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="lkpd-body">
+        <div class="card">
+            <div class="card-title"><i class="fa-solid fa-list-check"></i> Misi Konfigurasi</div>
+            <div class="checklist-item" id="chk-nat"><i class="fa-regular fa-circle-check" id="icon-nat"></i><span class="checklist-text">Router Pusat: Akses Internet (DHCP Client & NAT)</span></div>
+            <div class="checklist-item" id="chk-ospf"><i class="fa-regular fa-circle-check" id="icon-ospf"></i><span class="checklist-text">Routing OSPF Backbone (Inter-Router & VLAN)</span></div>
+            <div class="checklist-item" id="chk-vlan"><i class="fa-regular fa-circle-check" id="icon-vlan"></i><span class="checklist-text">Konfigurasi VLAN (ID 10 & 20) & Port Trunking</span></div>
+            <div class="checklist-item" id="chk-queue"><i class="fa-regular fa-circle-check" id="icon-queue"></i><span class="checklist-text">VPCS dapat IP & Limit Bandwidth Siswa (2Mbps)</span></div>
+        </div>
+
+        <div class="card" style="padding: 0; display: flex; flex-direction: column; border: none; background: transparent; box-shadow: none;">
+            <div class="terminal-container">
+                <div class="terminal-header">
+                    <div style="font-size: 12px; color: #64748b; font-weight: bold;">VPCS Console</div>
+                    <div class="terminal-tabs">
+                        <button class="tab-btn active" id="tab-guru" onclick="switchConsole('guru')">VPCS Guru</button>
+                        <button class="tab-btn" id="tab-siswa" onclick="switchConsole('siswa')">VPCS Siswa</button>
+                    </div>
+                </div>
+                <div class="terminal-box" id="terminal-output">
+                    <div style="color: #64748b; margin-bottom: 10px;">GNS3 Virtual PC Simulator.<br>Perintah tersedia: <b style="color:#e2e8f0;">ip dhcp</b>, <b style="color:#e2e8f0;">ping 8.8.8.8</b></div>
+                </div>
+                <div class="cli-input-area">
+                    <span class="cli-prompt" id="prompt-text">VPCS-Guru></span>
+                    <input type="text" id="cli-cmd-input" placeholder="Ketik perintah di sini..." autocomplete="off">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="pusat-modal">
+    <div class="mk-modal">
+        <div class="modal-header"><h3>Konfigurasi Router Pusat</h3><button class="modal-close" onclick="closeModal('pusat-modal')">&times;</button></div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <label>Ether1 (Internet)</label>
+                <select id="cfg-p-nat" onchange="updatePusatHint()">
+                    <option value="false">Tanpa Konfigurasi</option>
+                    <option value="true">DHCP Client + NAT Masquerade</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Routing Dinamis (OSPF)</label>
+                <select id="cfg-p-ospf" onchange="updatePusatHint()">
+                    <option value="false">Nonaktif</option>
+                    <option value="true">Aktifkan OSPF Area Backbone</option>
+                </select>
+            </div>
+            <div class="pro-hint-box">
+                <div class="pro-hint-title"><i class="fa-solid fa-terminal"></i> RouterOS CLI Equivalent</div>
+                <div class="pro-hint-code" id="hint-pusat-code">Pilih opsi konfigurasi untuk melihat perintah.</div>
+            </div>
+        </div>
+        <div class="modal-footer"><button style="background:#e2e8f0" onclick="closeModal('pusat-modal')">Tutup</button><button class="btn-primary" onclick="savePusat()">Apply</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="cabang-modal">
+    <div class="mk-modal">
+        <div class="modal-header"><h3>Konfigurasi Router Cabang</h3><button class="modal-close" onclick="closeModal('cabang-modal')">&times;</button></div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <label>VLAN 10 & 20 (ether2)</label>
+                <select id="cfg-c-vlan" onchange="updateCabangHint()">
+                    <option value="false">Tidak Dibuat</option>
+                    <option value="true">Buat VLAN & Setup DHCP Server</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Routing OSPF</label>
+                <select id="cfg-c-ospf" onchange="updateCabangHint()">
+                    <option value="false">Nonaktif</option>
+                    <option value="true">OSPF Backbone (Advertise VLAN Network)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Simple Queue (Target: VLAN Siswa)</label>
+                <select id="cfg-c-queue" onchange="updateCabangHint()">
+                    <option value="false">Unlimited</option>
+                    <option value="true">Max-Limit: 2M/2M</option>
+                </select>
+            </div>
+            <div class="pro-hint-box">
+                <div class="pro-hint-title"><i class="fa-solid fa-terminal"></i> RouterOS CLI Equivalent</div>
+                <div class="pro-hint-code" id="hint-cabang-code">Pilih opsi konfigurasi untuk melihat perintah.</div>
+            </div>
+        </div>
+        <div class="modal-footer"><button style="background:#e2e8f0" onclick="closeModal('cabang-modal')">Tutup</button><button class="btn-primary" onclick="saveCabang()">Apply</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="switch-modal">
+    <div class="mk-modal">
+        <div class="modal-header"><h3>GNS3 Ethernet Switch</h3><button class="modal-close" onclick="closeModal('switch-modal')">&times;</button></div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <label>Port 1 (Mengarah ke Router Cabang)</label>
+                <select id="cfg-s-p1">
+                    <option value="access">Access (VLAN 1)</option>
+                    <option value="trunk">dot1q (Trunk)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Port 2 (Mengarah ke VPCS Guru)</label>
+                <select id="cfg-s-p2">
+                    <option value="1">Access (VLAN 1)</option>
+                    <option value="10">Access (VLAN 10)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Port 3 (Mengarah ke VPCS Siswa)</label>
+                <select id="cfg-s-p3">
+                    <option value="1">Access (VLAN 1)</option>
+                    <option value="20">Access (VLAN 20)</option>
+                </select>
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">
+                <i>Hint: Pada GNS3 sesungguhnya, ini diseting melalui klik kanan Switch -> Configure -> VLAN tab.</i>
+            </div>
+        </div>
+        <div class="modal-footer"><button style="background:#e2e8f0" onclick="closeModal('switch-modal')">Tutup</button><button class="btn-primary" onclick="saveSwitch()">Apply</button></div>
+    </div>
+</div>
+
+<script>
+    let db = {
+        pusat: { nat: 'false', ospf: 'false' },
+        cabang: { vlan: 'false', ospf: 'false', queue: 'false' },
+        sw: { p1: 'access', p2: '1', p3: '1' },
+        vpcs: { guru: { ip: false }, siswa: { ip: false } }
+    };
+
+    let activeConsole = 'guru';
+
+    /* ========================================================
+       LIVE CLI HINTS LOGIC
+       ======================================================== */
+    function updatePusatHint() {
+        let nat = document.getElementById('cfg-p-nat').value;
+        let ospf = document.getElementById('cfg-p-ospf').value;
+        let code = "";
+        if(nat === 'true') { code += `/ip dhcp-client add interface=ether1\n/ip firewall nat add chain=srcnat out-interface=ether1 action=masquerade\n`; }
+        if(ospf === 'true') { code += `/routing ospf network add network=10.10.10.0/30 area=backbone`; }
+        document.getElementById('hint-pusat-code').innerText = code || "Tidak ada perintah aktif.";
+    }
+
+    function updateCabangHint() {
+        let vlan = document.getElementById('cfg-c-vlan').value;
+        let queue = document.getElementById('cfg-c-queue').value;
+        let code = "";
+        if(vlan === 'true') { code += `/interface vlan add name=vlan10 vlan-id=10 interface=ether2\n/interface vlan add name=vlan20 vlan-id=20 interface=ether2\n`; }
+        if(queue === 'true') { code += `/queue simple add name=Limit-Siswa target=192.168.20.0/24 max-limit=2M/2M`; }
+        document.getElementById('hint-cabang-code').innerText = code || "Tidak ada perintah aktif.";
+    }
+
+    /* ========================================================
+       TERMINAL & CONSOLE LOGIC
+       ======================================================== */
+    function switchConsole(pc) {
+        activeConsole = pc;
+        document.getElementById('tab-guru').className = `tab-btn ${pc === 'guru' ? 'active' : ''}`;
+        document.getElementById('tab-siswa').className = `tab-btn ${pc === 'siswa' ? 'active' : ''}`;
+        document.getElementById('prompt-text').innerText = `VPCS-${pc === 'guru' ? 'Guru' : 'Siswa'}>`;
+    }
+
+    document.getElementById('cli-cmd-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            let cmd = this.value.trim().toLowerCase();
+            if(!cmd) return;
+            
+            logTerminal(`VPCS-${activeConsole === 'guru' ? 'Guru' : 'Siswa'}> <span class="terminal-cmd">${this.value}</span>`, '');
+            this.value = '';
+
+            setTimeout(() => {
+                if (cmd === 'ip dhcp') {
+                    requestDHCP();
+                } else if (cmd.startsWith('ping ')) {
+                    let ip = cmd.split(' ')[1];
+                    runPingTest(ip);
+                } else {
+                    logTerminal(`Bukan perintah VPCS yang valid. Coba: ip dhcp, ping 8.8.8.8`, 'terminal-fail');
+                }
+            }, 300);
+        }
+    });
+
+    function requestDHCP() {
+        logTerminal("DORA IP 192.168...", 'terminal-warn');
+        setTimeout(() => {
+            let isTrunkOk = db.sw.p1 === 'trunk';
+            let isVlanOk = db.cabang.vlan === 'true';
+            let isPortOk = (activeConsole === 'guru' && db.sw.p2 === '10') || (activeConsole === 'siswa' && db.sw.p3 === '20');
+
+            if(isVlanOk && isTrunkOk && isPortOk) {
+                let ipStr = activeConsole === 'guru' ? '192.168.10.10/24 GW 192.168.10.1' : '192.168.20.10/24 GW 192.168.20.1';
+                logTerminal(`DHCP IP: ${ipStr}`, 'terminal-success');
+                db.vpcs[activeConsole].ip = true;
+                evaluate();
+            } else {
+                logTerminal(`Can't find dhcp server. (Cek konfigurasi VLAN, DHCP Router, dan Port Switch!)`, 'terminal-fail');
+                db.vpcs[activeConsole].ip = false;
+                evaluate();
+            }
+        }, 800);
+    }
+
+    function runPingTest(ip) {
+        if(!db.vpcs[activeConsole].ip) {
+            logTerminal(`Network unreachable. (PC belum mendapat IP)`, 'terminal-fail');
+            return;
+        }
+
+        if(ip !== '8.8.8.8') {
+            logTerminal(`VPCS hanya bisa simulasi ping ke 8.8.8.8 pada modul ini.`, 'terminal-fail');
+            return;
+        }
+
+        let routingOk = db.pusat.ospf === 'true' && db.cabang.ospf === 'true';
+        let natOk = db.pusat.nat === 'true';
+
+        if(routingOk && natOk) {
+            if(activeConsole === 'siswa' && db.cabang.queue === 'true') {
+                logTerminal(`84 bytes from 8.8.8.8 icmp_seq=1 ttl=116 time=150.000 ms <br>
+<span style="color:#fbbf24;">[INFO] Trafik dibatasi oleh Simple Queue (Max 2Mbps). Response lambat.</span>`, 'terminal-success');
+            } else {
+                logTerminal(`84 bytes from 8.8.8.8 icmp_seq=1 ttl=116 time=12.100 ms <br>
+84 bytes from 8.8.8.8 icmp_seq=2 ttl=116 time=11.200 ms`, 'terminal-success');
+            }
+        } else {
+            logTerminal(`*192.168.${activeConsole === 'guru'?'10':'20'}.1 (icmp_seq=1) Destination host unreachable<br>(Cek routing OSPF & rule NAT di router!)`, 'terminal-fail');
+        }
+    }
+
+    function logTerminal(msg, cls="") {
+        let box = document.getElementById('terminal-output');
+        box.innerHTML += `<div class="${cls}" style="margin-bottom:6px;">${msg}</div>`;
+        box.scrollTop = box.scrollHeight;
+    }
+
+    /* ========================================================
+       CORE LOGIC
+       ======================================================== */
+    function openModal(modalId) {
+        if(modalId === 'pusat-modal') {
+            document.getElementById('cfg-p-nat').value = db.pusat.nat;
+            document.getElementById('cfg-p-ospf').value = db.pusat.ospf;
+            updatePusatHint();
+        } else if(modalId === 'cabang-modal') {
+            document.getElementById('cfg-c-vlan').value = db.cabang.vlan;
+            document.getElementById('cfg-c-ospf').value = db.cabang.ospf;
+            document.getElementById('cfg-c-queue').value = db.cabang.queue;
+            updateCabangHint();
+        } else if(modalId === 'switch-modal') {
+            document.getElementById('cfg-s-p1').value = db.sw.p1;
+            document.getElementById('cfg-s-p2').value = db.sw.p2;
+            document.getElementById('cfg-s-p3').value = db.sw.p3;
+        }
+        document.getElementById(modalId).classList.add('active');
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function savePusat() { db.pusat.nat = document.getElementById('cfg-p-nat').value; db.pusat.ospf = document.getElementById('cfg-p-ospf').value; closeModal('pusat-modal'); evaluate(); }
+    function saveCabang() { db.cabang.vlan = document.getElementById('cfg-c-vlan').value; db.cabang.ospf = document.getElementById('cfg-c-ospf').value; db.cabang.queue = document.getElementById('cfg-c-queue').value; closeModal('cabang-modal'); evaluate(); }
+    function saveSwitch() { db.sw.p1 = document.getElementById('cfg-s-p1').value; db.sw.p2 = document.getElementById('cfg-s-p2').value; db.sw.p3 = document.getElementById('cfg-s-p3').value; closeModal('switch-modal'); evaluate(); }
+
+    function evaluate() {
+        let score = 0;
+        
+        let natOk = (db.pusat.nat === 'true');
+        updateChecklist('nat', natOk); if(natOk) score += 20;
+
+        let ospfOk = (db.pusat.ospf === 'true' && db.cabang.ospf === 'true');
+        updateChecklist('ospf', ospfOk); if(ospfOk) score += 30;
+
+        let vlanOk = (db.cabang.vlan === 'true' && db.sw.p1 === 'trunk' && db.sw.p2 === '10' && db.sw.p3 === '20');
+        updateChecklist('vlan', vlanOk); if(vlanOk) score += 25;
+
+        let limitOk = (db.vpcs.guru.ip && db.vpcs.siswa.ip && db.cabang.queue === 'true');
+        updateChecklist('queue', limitOk); if(limitOk) score += 25;
+
+        document.getElementById('total-score').innerText = `${score} / 100`;
+
+        // Update Labels Status
+        document.getElementById('lbl-pusat').innerText = natOk ? 'NAT & Routing OK' : (db.pusat.ospf === 'true' ? 'OSPF Only' : 'Menunggu Config');
+        document.getElementById('lbl-cabang').innerText = db.cabang.vlan === 'true' ? 'VLAN Trunk Active' : 'Menunggu Config';
+        document.getElementById('lbl-switch').innerText = db.sw.p1 === 'trunk' ? 'Trunk Mode' : 'Access Mode';
+        document.getElementById('lbl-guru').innerText = db.vpcs.guru.ip ? '192.168.10.10' : 'No IP (Ketik ip dhcp)';
+        document.getElementById('lbl-siswa').innerText = db.vpcs.siswa.ip ? '192.168.20.10' : 'No IP (Ketik ip dhcp)';
+
+        renderSVG();
+    }
+
+    function updateChecklist(key, isDone) {
+        let el = document.getElementById(`chk-${key}`);
+        let ic = document.getElementById(`icon-${key}`);
+        if(isDone) { el.classList.add('completed'); ic.className = 'fa-solid fa-circle-check'; } 
+        else { el.classList.remove('completed'); ic.className = 'fa-regular fa-circle-check'; }
+    }
+
+    function getLineHtml(id1, id2, statusClass) {
+        const e1 = document.getElementById(id1).getBoundingClientRect();
+        const e2 = document.getElementById(id2).getBoundingClientRect();
+        const cvs = document.getElementById('canvas-area').getBoundingClientRect();
+        const x1 = e1.left - cvs.left + e1.width/2, y1 = e1.top - cvs.top + e1.height/2;
+        const x2 = e2.left - cvs.left + e2.width/2, y2 = e2.top - cvs.top + e2.height/2;
+        return `<line class="wired-line ${statusClass}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`;
+    }
+
+    function renderSVG() {
+        let svg = '';
+        
+        svg += getLineHtml('cloud-node', 'r-pusat-node', db.pusat.nat === 'true' ? 'active' : '');
+        svg += getLineHtml('r-pusat-node', 'r-cabang-node', (db.pusat.ospf === 'true' && db.cabang.ospf === 'true') ? 'active' : '');
+        svg += getLineHtml('r-cabang-node', 'switch-node', (db.cabang.vlan === 'true' && db.sw.p1 === 'trunk') ? 'trunk' : '');
+        svg += getLineHtml('switch-node', 'vpcs-guru-node', db.vpcs.guru.ip ? 'vlan10' : '');
+        svg += getLineHtml('switch-node', 'vpcs-siswa-node', db.vpcs.siswa.ip ? 'vlan20' : '');
+
+        document.getElementById('svg-connections').innerHTML = svg;
+    }
+
+    window.addEventListener('resize', () => { setTimeout(() => evaluate(), 100); });
+    setTimeout(() => { evaluate(); }, 300);
+</script>
+</body>
+</html>
