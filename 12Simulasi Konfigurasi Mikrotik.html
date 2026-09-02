@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Praktikum Jaringan - Mikrotik Sekolah</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --mt-blue: #00a2e8;
+            --mt-dark: #333333;
+            --bg-light: #f4f4f4;
+            --card-bg: #ffffff;
+            --text-dark: #333;
+            --text-muted: #666;
+            --border-color: #ccc;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-lg: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-light); color: var(--text-dark); font-family: 'Inter', sans-serif; padding: 32px 16px; line-height: 1.5; }
+        
+        .container { max-width: 1320px; margin: 0 auto; background-color: var(--card-bg); border-radius: 8px; box-shadow: var(--shadow-lg); overflow: hidden; border: 1px solid var(--border-color); }
+        
+        /* HEADER */
+        header { background: #e0e0e0; color: var(--text-dark); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--mt-blue); }
+        .header-title { display: flex; align-items: center; gap: 16px; }
+        .header-title i { font-size: 28px; color: var(--mt-blue); }
+        .header-title h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+        .header-title p { font-size: 13px; color: var(--text-muted); }
+
+        .score-box { background: #fff; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-color); text-align: right; }
+        .score-title { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
+        .score-value { font-size: 22px; font-weight: 700; color: var(--mt-blue); font-family: 'JetBrains Mono', monospace; }
+
+        /* TOPOLOGY AREA */
+        .topology-section { background-color: #ffffff; border-bottom: 1px solid var(--border-color); }
+        .section-header { padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); background: #f9f9f9; }
+        .section-header-title { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        
+        .topology-wrapper { width: 100%; overflow-x: auto; }
+        .topology-canvas { position: relative; height: 450px; min-width: 900px; background-color: #fff; overflow: hidden; }
+        .connections-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        
+        /* CABLES & DEVICES */
+        .wired-line { stroke: #999; stroke-width: 3; transition: 0.4s; }
+        .wired-line.active { stroke: var(--success-color); stroke-width: 4; }
+        .wired-line.wireless { stroke: var(--mt-blue); stroke-width: 3; stroke-dasharray: 5 5; animation: flow 2s linear infinite;}
+        .wired-line.blocked { stroke: var(--danger-color); stroke-width: 3; stroke-dasharray: 4 4; }
+        @keyframes flow { to { stroke-dashoffset: -20; } }
+
+        .device-node { position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s; }
+        .device-node:hover { transform: translateY(-4px); }
+        
+        .device-icon-box { width: 56px; height: 56px; background-color: #fff; border: 2px solid #ccc; border-radius: 8px; display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-sm); position: relative; }
+        .device-icon-box i { font-size: 24px; color: #555; }
+
+        .router-icon-box { 
+            width: 72px; height: 72px; 
+            background: linear-gradient(135deg, #ffffff 0%, #e0f2fe 100%); 
+            border: 2px solid var(--mt-blue); border-radius: 14px; 
+            display: flex; justify-content: center; align-items: center; 
+            box-shadow: 0 0 15px rgba(0, 162, 232, 0.4), inset 0 0 10px rgba(255,255,255,0.8); 
+            position: relative; z-index: 5;
+        }
+        .router-icon-box svg { color: var(--mt-blue); width: 44px; height: 44px; }
+        .led-blink { animation: blinker 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes blinker { 50% { opacity: 0.2; } }
+        
+        .device-label { margin-top: 8px; font-size: 12px; font-weight: 600; background: #fff; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+        .device-ip { font-size: 10px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; display: block; margin-top: 2px; }
+        
+        .status-badge { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background-color: var(--danger-color); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; font-weight: bold; }
+        .status-badge.online { background-color: var(--success-color); }
+
+        #internet-node { top: 10%; left: 50%; transform: translateX(-50%); }
+        #router-node { top: 40%; left: 50%; transform: translateX(-50%); }
+        #switch-node { top: 40%; left: 20%; transform: translateX(-50%); }
+        #pc-node { top: 80%; left: 20%; transform: translateX(-50%); }
+        #laptop-node { top: 80%; left: 80%; transform: translateX(-50%); }
+
+        /* BOTTOM SECTION */
+        .lkpd-body { padding: 24px; display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; background: #fff; }
+        .card { border: 1px solid var(--border-color); border-radius: 6px; padding: 20px; }
+        .card-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px;}
+        
+        .checklist-item { display: flex; align-items: center; padding: 8px 0; gap: 10px; border-bottom: 1px dashed #eee;}
+        .checklist-item i { font-size: 16px; color: #ccc; }
+        .checklist-item.completed i { color: var(--success-color); }
+        .checklist-text { font-size: 12px; font-weight: 500; }
+
+        /* TERMINAL */
+        .terminal-container { border-radius: 6px; overflow: hidden; border: 1px solid #333; background: #111; height: 100%; display: flex; flex-direction: column; }
+        .terminal-header { background: #333; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; }
+        .terminal-tabs { display: flex; gap: 4px; }
+        .tab-btn { background: #444; color: #ccc; border: none; padding: 4px 12px; font-size: 11px; cursor: pointer; font-family: monospace;}
+        .tab-btn.active { background: #666; color: #fff; }
+        
+        .terminal-box { color: #ddd; font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 12px; flex: 1; overflow-y: auto; height: 180px;}
+        .terminal-success { color: #4ade80; } .terminal-fail { color: #f87171; }
+        
+        .cli-input-area { background: #000; padding: 8px 12px; display: flex; align-items: center; gap: 8px; border-top: 1px solid #333; }
+        .cli-prompt { color: #60a5fa; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; white-space: nowrap; }
+        #cli-cmd-input { background: transparent; border: none; outline: none; color: #fff; font-family: monospace; font-size: 12px; width: 100%; }
+
+        button.btn-primary { background: #eee; color: #333; border: 1px solid #ccc; padding: 6px 12px; font-size: 12px; cursor: pointer; border-radius: 4px; }
+        button.btn-primary:hover { background: #e0e0e0; }
+
+        /* MODALS (Winbox Style) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.2s; z-index: 100; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .mk-modal { background: #d4d0c8; width: 100%; max-width: 600px; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040; box-shadow: 2px 2px 10px rgba(0,0,0,0.3); font-family: Tahoma, sans-serif; display: flex; flex-direction: column; max-height: 90vh;}
+        .modal-header { background: linear-gradient(to right, #000080, #1084d0); color: #fff; padding: 4px 8px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;}
+        .modal-close { background: #c0c0c0; color: #000; border: 1px solid #fff; border-right-color: #404040; border-bottom-color: #404040; cursor: pointer; font-weight: bold; padding: 0 4px; font-size: 12px; }
+        .modal-close:active { border: 1px solid #404040; border-right-color: #fff; border-bottom-color: #fff; }
+        
+        .modal-body { padding: 12px; background: #d4d0c8; font-size: 11px; overflow-y: auto; flex: 1;}
+        
+        /* Winbox Tabs */
+        .wb-tabs-container { border-bottom: 1px solid #808080; margin-bottom: 12px; display: flex; gap: 2px; }
+        .wb-tab { background: #d4d0c8; border: 1px solid #fff; border-bottom: none; border-right-color: #404040; padding: 4px 12px; cursor: pointer; font-size: 11px; margin-bottom: -1px; position: relative; z-index: 1; }
+        .wb-tab.active { background: #d4d0c8; border-top: 2px solid #fff; border-left: 2px solid #fff; z-index: 3; padding-bottom: 6px; font-weight: bold; }
+        
+        .wb-tab-content { display: none; padding: 10px; border: 1px solid #808080; border-top: none; border-right-color: #fff; border-bottom-color: #fff; background: #d4d0c8; }
+        .wb-tab-content.active { display: block; }
+
+        .wb-fieldset { border: 1px solid #a0a0a0; padding: 8px; margin-bottom: 12px; border-radius: 2px; background: #fafafa;}
+        .wb-legend { font-weight: bold; color: #00569c; padding: 0 4px; font-size: 11px; border-bottom: 1px solid #ddd; margin-bottom: 8px; width: 100%; display: block;}
+        
+        .wb-form-group { display: flex; align-items: center; margin-bottom: 6px; }
+        .wb-form-group label { width: 130px; font-weight: normal; color: #000; }
+        .wb-form-group input, .wb-form-group select { flex: 1; padding: 3px; font-size: 11px; border: 1px solid #808080; }
+        .wb-form-group input:focus { outline: none; border-color: #00569c; }
+
+        .modal-footer { padding: 10px; background: #d4d0c8; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #a0a0a0; }
+        .btn-winbox { background: #d4d0c8; color: #000; border: 1px solid #fff; border-right-color: #404040; border-bottom-color: #404040; padding: 4px 16px; font-size: 11px; cursor: pointer; }
+        .btn-winbox:active { border: 1px solid #404040; border-right-color: #fff; border-bottom-color: #fff; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-title">
+            <i class="fa-solid fa-network-wired"></i>
+            <div>
+                <h1>Topologi Jaringan Sekolah</h1>
+                <p>Simulasi Konfigurasi Mikrotik: LAN, Hotspot, Walled Garden & Filter Rules</p>
+            </div>
+        </div>
+        <div class="score-box">
+            <div class="score-title">Status Lab</div>
+            <div class="score-value" id="total-score">0%</div>
+        </div>
+    </header>
+
+    <div class="topology-section">
+        <div class="section-header">
+            <span class="section-header-title"><i class="fa-solid fa-sitemap"></i> Peta Jaringan</span>
+            <button class="btn-primary" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Reset</button>
+        </div>
+        
+        <div class="topology-wrapper">
+            <div class="topology-canvas" id="canvas-area">
+                <svg class="connections-svg" id="svg-connections"></svg>
+
+                <div class="device-node" id="internet-node">
+                    <div class="device-icon-box" style="border-radius: 50%;"><i class="fa-solid fa-cloud"></i></div>
+                    <div class="device-label">INTERNET<br><span class="device-ip">192.168.1.1</span></div>
+                </div>
+
+                <div class="device-node" id="router-node" onclick="openModal('router-modal')">
+                    <div class="router-icon-box">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="5" y2="4"></line>
+                            <circle cx="5" cy="4" r="1" fill="currentColor"></circle>
+                            <line x1="19" y1="12" x2="19" y2="4"></line>
+                            <circle cx="19" cy="4" r="1" fill="currentColor"></circle>
+                            <line x1="12" y1="12" x2="12" y2="7"></line>
+                            <rect x="2" y="12" width="20" height="9" rx="2" ry="2" fill="#ffffff"></rect>
+                            <circle cx="7" cy="16.5" r="1.5" fill="#10b981" stroke="none" class="led-blink"></circle>
+                            <circle cx="12" cy="16.5" r="1.5" fill="#10b981" stroke="none" class="led-blink" style="animation-delay: 0.3s;"></circle>
+                            <circle cx="17" cy="16.5" r="1.5" fill="#10b981" stroke="none" class="led-blink" style="animation-delay: 0.6s;"></circle>
+                        </svg>
+                        <div class="status-badge" id="rt-badge">!</div>
+                    </div>
+                    <div class="device-label">Wifi Router (Mikrotik)<br><span class="device-ip" id="lbl-rt">Klik untuk Konfigurasi</span></div>
+                </div>
+
+                <div class="device-node" id="switch-node">
+                    <div class="device-icon-box"><i class="fa-solid fa-server"></i></div>
+                    <div class="device-label">Block Youtube.com Switch<br><span class="device-ip">Non Hotspot</span></div>
+                </div>
+
+                <div class="device-node" id="pc-node">
+                    <div class="device-icon-box"><i class="fa-solid fa-desktop"></i></div>
+                    <div class="device-label">PC Desktop (Kabel)<br><span class="device-ip">192.168.100.2</span></div>
+                </div>
+
+                <div class="device-node" id="laptop-node">
+                    <div class="device-icon-box"><i class="fa-solid fa-laptop"></i></div>
+                    <div class="device-label">Laptop (Hotspot)<br><span class="device-ip" id="lbl-laptop">IP DHCP</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="lkpd-body">
+        <div class="card">
+            <div class="card-title"><i class="fa-solid fa-list-check"></i> Skenario Konfigurasi</div>
+            <div class="checklist-item" id="chk-ip"><i class="fa-solid fa-circle-xmark" id="icon-ip"></i><span class="checklist-text">1. Setup IP Address, Gateway, & DNS</span></div>
+            <div class="checklist-item" id="chk-fw"><i class="fa-solid fa-circle-xmark" id="icon-fw"></i><span class="checklist-text">2. NAT & Firewall L7: Block Youtube.com</span></div>
+            <div class="checklist-item" id="chk-hs"><i class="fa-solid fa-circle-xmark" id="icon-hs"></i><span class="checklist-text">3. Setup Wireless & Manajemen Hotspot Profil</span></div>
+            <div class="checklist-item" id="chk-wg"><i class="fa-solid fa-circle-xmark" id="icon-wg"></i><span class="checklist-text">4. Walled Garden: Akses bsnp-indonesia.org</span></div>
+        </div>
+
+        <div class="card" style="padding: 0; display: flex; flex-direction: column; border: none;">
+            <div class="terminal-container">
+                <div class="terminal-header">
+                    <div style="font-size: 11px; color: #aaa;">Client Simulator</div>
+                    <div class="terminal-tabs">
+                        <button class="tab-btn active" id="tab-pc" onclick="switchConsole('pc')">PC Desktop</button>
+                        <button class="tab-btn" id="tab-laptop" onclick="switchConsole('laptop')">Laptop</button>
+                    </div>
+                </div>
+                <div class="terminal-box" id="terminal-output">
+                    <div style="color: #888; margin-bottom: 8px;">Simulasi CMD Klien.<br>Perintah tes: <b>ping 8.8.8.8</b>, <b>ping youtube.com</b>, <b>ping bsnp-indonesia.org</b><br>Laptop: <b>ip dhcp</b>, <b>login siswa</b>, <b>login guru</b></div>
+                </div>
+                <div class="cli-input-area">
+                    <span class="cli-prompt" id="prompt-text">C:\PC></span>
+                    <input type="text" id="cli-cmd-input" placeholder="Ketik perintah..." autocomplete="off">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="router-modal">
+    <div class="mk-modal">
+        <div class="modal-header">
+            <span>Winbox - admin@192.168.1.1 (MikroTik) - Winbox</span>
+            <button class="modal-close" onclick="closeModal('router-modal')">X</button>
+        </div>
+        <div class="modal-body">
+            
+            <div class="wb-tabs-container">
+                <button class="wb-tab active" id="btn-tab-ip" onclick="switchWbTab('ip')">1-2. IP & Route</button>
+                <button class="wb-tab" id="btn-tab-fw" onclick="switchWbTab('fw')">3-4. Firewall</button>
+                <button class="wb-tab" id="btn-tab-wl" onclick="switchWbTab('wl')">5. Wireless</button>
+                <button class="wb-tab" id="btn-tab-hs" onclick="switchWbTab('hs')">6-8. Hotspot</button>
+            </div>
+
+            <div id="content-tab-ip" class="wb-tab-content active">
+                <div class="wb-fieldset">
+                    <span class="wb-legend">Step 1: IP Addresses</span>
+                    <div class="wb-form-group">
+                        <label>Address (ether1):</label>
+                        <input type="text" id="cfg_ip_eth1" placeholder="Misal: 192.168.1.100/24">
+                    </div>
+                    <div class="wb-form-group">
+                        <label>Address (ether2):</label>
+                        <input type="text" id="cfg_ip_eth2" placeholder="Misal: 192.168.100.1/24">
+                    </div>
+                    <div class="wb-form-group">
+                        <label>Address (wlan1):</label>
+                        <input type="text" id="cfg_ip_wlan1" placeholder="Misal: 192.168.200.1/24">
+                    </div>
+                </div>
+                <div class="wb-fieldset">
+                    <span class="wb-legend">Step 2: Routes & DNS</span>
+                    <div class="wb-form-group">
+                        <label>Default Gateway (0.0.0.0/0):</label>
+                        <input type="text" id="cfg_gw" placeholder="IP Gateway Internet">
+                    </div>
+                    <div class="wb-form-group">
+                        <label>DNS Servers:</label>
+                        <input type="text" id="cfg_dns" placeholder="Misal: 8.8.8.8">
+                    </div>
+                    <div class="wb-form-group">
+                        <label></label>
+                        <label style="width: auto; font-size: 10px;"><input type="checkbox" id="cfg_dns_allow" checked> Allow Remote Requests</label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="content-tab-fw" class="wb-tab-content">
+                <div class="wb-fieldset">
+                    <span class="wb-legend">Step 3: NAT (Network Address Translation)</span>
+                    <div class="wb-form-group">
+                        <label>Chain:</label>
+                        <select id="cfg_nat_chain"><option value="">-- Pilih --</option><option value="srcnat">srcnat</option><option value="dstnat">dstnat</option></select>
+                    </div>
+                    <div class="wb-form-group">
+                        <label>Out. Interface:</label>
+                        <select id="cfg_nat_out"><option value="ether1">ether1</option><option value="ether2">ether2</option></select>
+                    </div>
+                    <div class="wb-form-group">
+                        <label>Action:</label>
+                        <select id="cfg_nat_action"><option value="">-- Pilih --</option><option value="accept">accept</option><option value="masquerade">masquerade</option><option value="drop">drop</option></select>
+                    </div>
+                </div>
+                <div class="wb-fieldset">
+                    <span class="wb-legend">Step 4: Layer 7 Protocol & Filter Rules</span>
+                    <div class="wb-form-group">
+                        <label>L7 Name:</label>
+                        <input type="text" value="Youtube Block" disabled>
+                    </div>
+                    <div class="wb-form-group">
+                        <label>L7 Regexp:</label>
+                        <input type="text" id="cfg_l7_regex" placeholder="^.+(youtube).*">
+                    </div>
+                    <div style="border-top: 1px dashed #ccc; margin: 8px 0;"></div>
+                    <div class="wb-form-group">
+                        <label>Filter Chain:</label>
+                        <select id="cfg_fw_chain"><option value="input">input</option><option value="forward">forward</option></select>
+                    </div>
+                    <div class="wb-form-group">
+                        <label>Layer7 Protocol:</label>
+                        <select id="cfg_fw_l7"><option value="Youtube Block">Youtube Block</option><option value="">None</option></select>
+                    </div>
+                    <div class="wb-form-group">
+                        <label>Action:</label>
+                        <select id="cfg_fw_action"><option value="accept">accept</option><option value="drop">drop</option><option value="reject">reject</option></select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="content-tab-wl" class="wb-tab-content">
+                <div class="wb-fieldset">
+                    <span class="wb-legend">Step 5: Wireless & Security Profile</span>
+                    <div class="wb-form-group">
+                        <label>Security Mode:</label>
+                        <select id="cfg_wl_sec"><option value="none">none</option><option value="dynamic keys">dynamic keys</option></select>
+                    </div>
+                    <div class="wb-form-group">
+                        <label>WPA/WPA2 Pre-Shared Key:</label>
+                        <input type="text" id="cfg_wl_pwd" placeholder="Password123">
+                    </div>
+                    <div style="border-top: 1px dashed #ccc; margin: 8px 0;"></div>
+                    <div class="wb-form-group">
+                        <label>Wireless Mode:</label>
+                        <select id="cfg_wl_mode"><option value="station">station</option><option value="ap bridge">ap bridge</option></select>
+                    </div>
+                    <div class="wb-form-group">
+                        <label>SSID:</label>
+                        <input type="text" id="cfg_wl_ssid" placeholder="didit@Hotspot">
+                    </div>
+                </div>
+            </div>
+
+            <div id="content-tab-hs" class="wb-tab-content">
+                <div class="wb-fieldset">
+                    <span class="wb-legend">Step 6: Hotspot Setup</span>
+                    <div class="wb-form-group">
+                        <label>Hotspot Interface:</label>
+                        <select id="cfg_hs_int"><option value="">-- Pilih --</option><option value="ether2">ether2</option><option value="wlan1">wlan1</option></select>
+                    </div>
+                </div>
+                <div class="wb-fieldset">
+                    <span class="wb-legend">Step 7: User Profiles & Users</span>
+                    <div class="wb-form-group">
+                        <label>Profile Siswa Rate Limit:</label>
+                        <input type="text" id="cfg_hs_siswa_limit" placeholder="Misal: 256k/256k">
+                    </div>
+                    <div class="wb-form-group">
+                        <label>Users Created:</label>
+                        <label style="width:auto; font-size:10px;"><input type="checkbox" id="cfg_hs_users" value="yes"> Guru & Siswa</label>
+                    </div>
+                </div>
+                <div class="wb-fieldset">
+                    <span class="wb-legend">Step 8: Walled Garden</span>
+                    <div class="wb-form-group">
+                        <label>Action:</label>
+                        <select id="cfg_wg_action"><option value="allow">allow</option><option value="deny">deny</option></select>
+                    </div>
+                    <div class="wb-form-group">
+                        <label>Dst. Host:</label>
+                        <input type="text" id="cfg_wg_host" placeholder="Misal: bsnp-indonesia.org">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="modal-footer">
+            <button class="btn-winbox" onclick="closeModal('router-modal')">Cancel</button>
+            <button class="btn-winbox" style="font-weight: bold;" onclick="saveRouter()">Apply & OK</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let state = {
+        router: { 
+            ip_eth1: '', ip_eth2: '', ip_wlan1: '', gw: '', dns: '',
+            nat_chain: '', nat_action: '',
+            l7_regex: '', fw_chain: '', fw_action: '',
+            wl_mode: '', wl_ssid: '', wl_pwd: '',
+            hs_int: '', hs_siswa_limit: '', hs_users: false,
+            wg_action: '', wg_host: ''
+        },
+        clients: {
+            pc: { ip: '192.168.100.2', gateway: '192.168.100.1' },
+            laptop: { ip: false, loggedIn: false, user: '' }
+        }
+    };
+    let activeConsole = 'pc';
+
+    function switchWbTab(tabId) {
+        document.querySelectorAll('.wb-tab').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.wb-tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(`btn-tab-${tabId}`).classList.add('active');
+        document.getElementById(`content-tab-${tabId}`).classList.add('active');
+    }
+
+    function switchConsole(type) {
+        activeConsole = type;
+        document.getElementById('tab-pc').className = `tab-btn ${type === 'pc' ? 'active' : ''}`;
+        document.getElementById('tab-laptop').className = `tab-btn ${type === 'laptop' ? 'active' : ''}`;
+        document.getElementById('prompt-text').innerText = type === 'pc' ? 'C:\\PC>' : 'C:\\Laptop>';
+    }
+
+    document.getElementById('cli-cmd-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            let cmd = this.value.trim().toLowerCase();
+            if (!cmd) return;
+            
+            let promptText = document.getElementById('prompt-text').innerText;
+            logTerminal(`${promptText} <span style="color:#fff; font-weight:bold;">${cmd}</span>`);
+            this.value = '';
+            
+            setTimeout(() => { processCommand(cmd, activeConsole); }, 200);
+        }
+    });
+
+    function getVal(id) {
+        let el = document.getElementById(id);
+        if(el.type === 'checkbox') return el.checked;
+        return el.value.trim().toLowerCase();
+    }
+
+    function processCommand(cmd, client) {
+        let out = ""; let cls = "terminal-success";
+        let r = state.router;
+
+        let hasInternet = (r.ip_eth1 === '192.168.1.100/24' && r.gw === '192.168.1.1' && r.dns === '8.8.8.8' && r.nat_chain === 'srcnat' && r.nat_action === 'masquerade');
+        let routingWired = (r.ip_eth2 === '192.168.100.1/24');
+        let routingWifi = (r.ip_wlan1 === '192.168.200.1/24' && r.wl_mode === 'ap bridge');
+        
+        if (client === 'laptop' && cmd === 'ip dhcp') {
+            if (routingWifi && r.hs_int === 'wlan1') {
+                state.clients.laptop.ip = true;
+                out = "DHCP Request successful. IPv4 Address: 192.168.200.50";
+                document.getElementById('lbl-laptop').innerText = "192.168.200.50";
+            } else {
+                out = "DHCP failed. Pastikan IP wlan1, Mode AP, dan Setup Hotspot dikonfigurasi."; cls = "terminal-fail";
+            }
+        } 
+        else if (client === 'laptop' && cmd.startsWith('login ')) {
+            if (!state.clients.laptop.ip) { out = "No IP Address. Request DHCP first."; cls = "terminal-fail"; }
+            else if (!r.hs_users) { out = "Sistem Hotspot / Users belum dikonfigurasi di Router."; cls = "terminal-fail"; }
+            else {
+                let user = cmd.split(' ')[1];
+                if (user === 'siswa' || user === 'guru') {
+                    state.clients.laptop.loggedIn = true;
+                    state.clients.laptop.user = user;
+                    let speed = user === 'siswa' ? r.hs_siswa_limit || 'default' : 'Unlimited';
+                    out = `Hotspot Login Success.\nWelcome ${user}. Bandwidth limit: ${speed}`;
+                } else {
+                    out = "Invalid user. Gunakan 'siswa' atau 'guru'."; cls = "terminal-fail";
+                }
+            }
+        }
+        else if (cmd.startsWith('ping ')) {
+            let target = cmd.split(' ')[1];
+            
+            if (client === 'pc') {
+                if (!hasInternet || !routingWired) {
+                    out = "Request timed out. (Cek IP, DNS, Route, dan NAT pada Router)"; cls = "terminal-fail";
+                } else if (target === 'youtube.com' && r.l7_regex.includes('youtube') && r.fw_chain === 'forward' && r.fw_action === 'drop') {
+                    out = "Pinging youtube.com [142.250.66.110] with 32 bytes of data:\nRequest timed out. (Blocked by L7 Firewall)"; cls = "terminal-fail";
+                } else {
+                    out = `Reply from ${target}: bytes=32 time=12ms TTL=54`;
+                }
+            } 
+            else if (client === 'laptop') {
+                if (!state.clients.laptop.ip) {
+                    out = "Transmit failed. General failure. (No IP)"; cls = "terminal-fail";
+                } else if (!hasInternet || !routingWifi) {
+                    out = "Request timed out. (Cek Koneksi Internet Router & AP)"; cls = "terminal-fail";
+                } else if (target === 'bsnp-indonesia.org') {
+                    if ((r.wg_host === 'bsnp-indonesia.org' && r.wg_action === 'allow') || state.clients.laptop.loggedIn) {
+                        out = `Reply from bsnp-indonesia.org [103.28.15.10]: bytes=32 time=20ms TTL=50 (Akses Diizinkan Walled Garden / Login)`;
+                    } else {
+                        out = "Redirect to Hotspot Login. (Bypass gagal, cek Walled Garden)"; cls = "terminal-fail";
+                    }
+                } else {
+                    if (state.clients.laptop.loggedIn) {
+                        out = `Reply from ${target}: bytes=32 time=18ms TTL=52 (Bandwidth Profile: ${state.clients.laptop.user})`;
+                    } else {
+                        out = "Redirect to Hotspot Login. Please login to access internet."; cls = "terminal-fail";
+                    }
+                }
+            }
+        } else {
+            out = "Bad command or file name"; cls = "terminal-fail";
+        }
+        
+        logTerminal(out, cls);
+    }
+
+    function logTerminal(msg, cls="") {
+        let box = document.getElementById('terminal-output');
+        box.innerHTML += `<div class="${cls}" style="margin-bottom:6px; white-space:pre-wrap;">${msg}</div>`;
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function saveRouter() {
+        state.router.ip_eth1 = getVal('cfg_ip_eth1');
+        state.router.ip_eth2 = getVal('cfg_ip_eth2');
+        state.router.ip_wlan1 = getVal('cfg_ip_wlan1');
+        state.router.gw = getVal('cfg_gw');
+        state.router.dns = getVal('cfg_dns');
+        
+        state.router.nat_chain = getVal('cfg_nat_chain');
+        state.router.nat_action = getVal('cfg_nat_action');
+        
+        state.router.l7_regex = getVal('cfg_l7_regex');
+        state.router.fw_chain = getVal('cfg_fw_chain');
+        state.router.fw_action = getVal('cfg_fw_action');
+        
+        state.router.wl_mode = getVal('cfg_wl_mode');
+        state.router.wl_ssid = getVal('cfg_wl_ssid');
+        state.router.wl_pwd = getVal('cfg_wl_pwd');
+        
+        state.router.hs_int = getVal('cfg_hs_int');
+        state.router.hs_siswa_limit = getVal('cfg_hs_siswa_limit');
+        state.router.hs_users = getVal('cfg_hs_users');
+        
+        state.router.wg_action = getVal('cfg_wg_action');
+        state.router.wg_host = getVal('cfg_wg_host');
+
+        closeModal('router-modal');
+        evaluate();
+    }
+
+    function evaluate() {
+        let r = state.router;
+        let score = 0;
+        
+        // 1. IP & Route Check
+        let ipOk = (r.ip_eth1 === '192.168.1.100/24' && r.ip_eth2 === '192.168.100.1/24' && r.ip_wlan1 === '192.168.200.1/24' && r.gw === '192.168.1.1' && r.dns === '8.8.8.8');
+        updateCheck(ipOk, 'ip'); if(ipOk) score += 25;
+
+        // 2. NAT & Filter Block YT Check
+        let fwOk = (r.nat_chain === 'srcnat' && r.nat_action === 'masquerade' && r.l7_regex.includes('youtube') && r.fw_chain === 'forward' && r.fw_action === 'drop');
+        updateCheck(fwOk, 'fw'); if(fwOk) score += 25;
+
+        // 3. Wireless & Hotspot Check
+        let hsOk = (r.wl_mode === 'ap bridge' && r.hs_int === 'wlan1' && r.hs_siswa_limit === '256k/256k' && r.hs_users === true);
+        updateCheck(hsOk, 'hs'); if(hsOk) score += 25;
+
+        // 4. Walled Garden Check
+        let wgOk = (r.wg_host === 'bsnp-indonesia.org' && r.wg_action === 'allow');
+        updateCheck(wgOk, 'wg'); if(wgOk) score += 25;
+
+        document.getElementById('total-score').innerText = score + '%';
+        
+        document.getElementById('rt-badge').className = 'status-badge ' + (ipOk ? 'online' : '');
+        document.getElementById('rt-badge').innerText = ipOk ? '✓' : '!';
+        document.getElementById('lbl-rt').innerText = ipOk ? 'Terkonfigurasi' : 'Klik untuk Konfigurasi';
+
+        renderSVG();
+    }
+
+    function updateCheck(isOk, id) {
+        let el = document.getElementById(`chk-${id}`);
+        let ic = document.getElementById(`icon-${id}`);
+        if(isOk) { el.classList.add('completed'); ic.className = 'fa-solid fa-circle-check'; } 
+        else { el.classList.remove('completed'); ic.className = 'fa-solid fa-circle-xmark'; }
+    }
+
+    function getLineHtml(id1, id2, customClass="active") {
+        const e1 = document.getElementById(id1).getBoundingClientRect();
+        const e2 = document.getElementById(id2).getBoundingClientRect();
+        const cvs = document.getElementById('canvas-area').getBoundingClientRect();
+        const x1 = e1.left - cvs.left + e1.width/2, y1 = e1.top - cvs.top + e1.height/2;
+        const x2 = e2.left - cvs.left + e2.width/2, y2 = e2.top - cvs.top + e2.height/2;
+        return `<line class="wired-line ${customClass}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`;
+    }
+
+    function renderSVG() {
+        let svg = '';
+        svg += getLineHtml('internet-node', 'router-node', state.router.ip_eth1 !== '' ? 'active' : '');
+        svg += getLineHtml('router-node', 'switch-node', state.router.ip_eth2 !== '' ? 'active' : '');
+        svg += getLineHtml('switch-node', 'pc-node', 'active');
+        svg += getLineHtml('router-node', 'laptop-node', state.router.ip_wlan1 !== '' ? 'wireless' : '');
+        document.getElementById('svg-connections').innerHTML = svg;
+    }
+
+    window.addEventListener('resize', renderSVG);
+    setTimeout(renderSVG, 200);
+</script>
+</body>
+</html>
