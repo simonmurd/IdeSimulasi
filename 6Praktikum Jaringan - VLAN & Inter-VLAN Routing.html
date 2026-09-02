@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Praktikum Jaringan - VLAN & Inter-VLAN Routing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --cisco-blue: #005073;
+            --cisco-light-blue: #0284c7;
+            --cisco-accent: #06b6d4;
+            --bg-light: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: #e2e8f0; color: var(--text-dark); font-family: 'Inter', sans-serif; padding: 16px; }
+        
+        .container { 
+            max-width: 1320px; 
+            margin: 0 auto; 
+            background-color: var(--card-bg); 
+            border-radius: 12px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
+            overflow: hidden; 
+        }
+        
+        /* Header Responsif */
+        header { 
+            background: linear-gradient(135deg, var(--cisco-blue) 0%, #00334e 100%); 
+            color: #fff; 
+            padding: 20px 24px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 4px solid var(--cisco-accent);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .header-title { display: flex; align-items: center; gap: 14px; }
+        .header-title i { font-size: 24px; color: var(--cisco-accent); background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; }
+        .header-title h1 { font-size: 18px; font-weight: 700; }
+        .header-title p { font-size: 11px; color: #94a3b8; line-height: 1.4; }
+
+        .score-box { 
+            background: rgba(255,255,255,0.1); 
+            padding: 8px 16px; 
+            border-radius: 8px; 
+            border: 1px solid rgba(255,255,255,0.2); 
+            text-align: right; 
+        }
+        .score-title { font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px; }
+        .score-value { font-size: 20px; font-weight: 700; color: var(--cisco-accent); font-family: 'JetBrains Mono', monospace; }
+
+        /* Topology Area */
+        .topology-section { padding: 20px 24px; background-color: #ffffff; border-bottom: 1px solid var(--border-color); }
+        .section-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 12px; 
+            font-weight: 700; 
+            color: var(--cisco-blue);
+            font-size: 13px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .topology-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        .topology-canvas { 
+            position: relative; 
+            height: 550px; 
+            min-width: 850px; 
+            background-color: #fafafa; 
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px); 
+            background-size: 24px 24px; 
+            overflow: hidden; 
+        }
+        .connections-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        
+        .wired-line { stroke: #cbd5e1; stroke-width: 3; transition: all 0.3s; }
+        .wired-line.active { stroke: var(--success-color); stroke-width: 4; }
+        .wired-line.trunk { stroke: var(--cisco-accent); stroke-dasharray: 6 4; animation: trunkPulse 2s linear infinite; }
+        .wired-line.error { stroke: var(--danger-color); stroke-dasharray: 4 4; opacity: 0.7; }
+        
+        @keyframes trunkPulse { to { stroke-dashoffset: -30; } }
+
+        .device-node { position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: center; cursor: pointer; user-select: none; transition: transform 0.2s; }
+        .device-node:active { transform: scale(0.95); }
+        .device-icon-box { width: 56px; height: 56px; background-color: #fff; border: 2px solid var(--border-color); border-radius: 10px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.05); position: relative; }
+        .device-icon-box i { font-size: 22px; color: var(--text-muted); }
+        .device-node.configured .device-icon-box i { color: var(--cisco-blue); }
+        
+        .core-node .device-icon-box { width: 66px; height: 66px; background: #f8fafc; }
+        .core-node.configured .device-icon-box { border-color: var(--cisco-blue); background: #f1f5f9; }
+        .core-node.configured .device-icon-box i { font-size: 26px; color: var(--cisco-blue); }
+
+        .device-label { margin-top: 6px; font-size: 11px; font-weight: 600; background: rgba(255,255,255,0.95); padding: 3px 8px; border: 1px solid #e2e8f0; border-radius: 4px; text-align: center; line-height: 1.3; }
+        .device-ip { font-size: 9px; color: var(--text-muted); font-weight: 500; display: block; margin-top: 2px; }
+        .device-node.configured .device-ip { color: var(--cisco-light-blue); }
+        
+        .status-badge { position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; border-radius: 50%; background-color: var(--danger-color); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff; font-weight: bold; }
+        .status-badge.online { background-color: var(--success-color); }
+
+        /* Coordinate Positioning */
+        #router-node { top: 5%; left: 50%; transform: translateX(-50%); }
+        #core-node { top: 28%; left: 50%; transform: translateX(-50%); }
+        #sw1-node { top: 52%; left: 25%; transform: translateX(-50%); }
+        #sw2-node { top: 52%; left: 75%; transform: translateX(-50%); }
+        
+        #pc1-node { top: 78%; left: 15%; transform: translateX(-50%); }
+        #pc2-node { top: 78%; left: 35%; transform: translateX(-50%); }
+        #pc3-node { top: 78%; left: 65%; transform: translateX(-50%); }
+        #pc4-node { top: 78%; left: 85%; transform: translateX(-50%); }
+
+        /* Content Layout */
+        .lkpd-body { padding: 24px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; }
+        .card { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; }
+        .card-title { font-size: 14px; font-weight: 700; color: var(--cisco-blue); margin-bottom: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Checklist Styling */
+        .checklist-group { display: flex; flex-direction: column; gap: 8px; }
+        .checklist-item { display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border: 1px solid var(--border-color); padding: 10px 12px; border-radius: 8px; transition: all 0.2s; gap: 8px; }
+        .checklist-item.completed { background: #f0fdf4; border-color: #bbf7d0; }
+        .item-info { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 500; }
+        .item-info i { font-size: 15px; color: var(--text-muted); flex-shrink: 0; }
+        .checklist-item.completed .item-info i { color: var(--success-color); }
+        .item-points { font-size: 10px; font-weight: 700; background: #e2e8f0; color: var(--text-dark); padding: 3px 6px; border-radius: 10px; white-space: nowrap; }
+        .checklist-item.completed .item-points { background: #dcfce7; color: #15803d; }
+
+        /* Terminal & Controls */
+        .terminal-box { background: #0f172a; color: #38bdf8; font-family: 'JetBrains Mono', monospace; font-size: 11px; border-radius: 8px; padding: 12px; height: 220px; overflow-y: auto; line-height: 1.5; }
+        .terminal-success { color: #4ade80; } .terminal-fail { color: #f87171; } .terminal-warn { color: #fbbf24; }
+        .ping-controls { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-top: 12px; }
+        .ping-controls select, .ping-controls button { padding: 10px 8px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .btn-cisco { background: var(--cisco-blue); color: #fff; border: none; cursor: pointer; font-weight: 600; padding: 8px 14px; border-radius: 6px; transition: background 0.2s; }
+        .btn-cisco:hover { background: #00334e; }
+
+        /* Modal Settings */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,23,42,0.6); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.2s; z-index: 100; padding: 12px; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .cisco-modal { background: #fff; width: 100%; max-width: 460px; border-radius: 10px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
+        .modal-header { background: var(--cisco-blue); color: #fff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .modal-body { padding: 16px; max-height: 75vh; overflow-y: auto; }
+        .form-grid { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+        .form-grid label { font-size: 11px; font-weight: 600; color: var(--text-dark); }
+        .form-grid input, .form-grid select { padding: 9px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; font-family: inherit; }
+        .modal-footer { padding: 10px 16px; background: #f8fafc; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border-color); }
+        
+        .badge-info { font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 10px; border-radius: 6px; margin-bottom: 12px; line-height: 1.4; border-left: 3px solid #0284c7; }
+
+        @media (max-width: 768px) {
+            body { padding: 8px; }
+            header { flex-direction: column; align-items: stretch; text-align: center; }
+            .header-title { flex-direction: column; text-align: center; }
+            .score-box { text-align: center; }
+            .lkpd-body { grid-template-columns: 1fr; padding: 12px; gap: 16px; }
+            .ping-controls { grid-template-columns: 1fr; }
+            .btn-cisco { width: 100%; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-title">
+            <i class="fa-solid fa-sitemap"></i>
+            <div>
+                <h1>Praktikum Topologi Sekolah (Inter-VLAN Routing)</h1>
+                <p>VLAN 10: Guru (192.168.10.x) | VLAN 20: Lab 1 (192.168.20.x) | VLAN 30: Lab 2 (192.168.30.x)</p>
+            </div>
+        </div>
+        <div class="score-box">
+            <div class="score-title">Nilai Praktikum</div>
+            <div class="score-value" id="total-score">0 / 100</div>
+        </div>
+    </header>
+
+    <div class="topology-section">
+        <div class="section-header">
+            <span><i class="fa-solid fa-hand-pointer"></i> Peta Topologi (Klik perangkat untuk konfigurasi)</span>
+            <button class="btn-cisco" style="font-size: 11px; padding: 4px 10px; background: #64748b;" onclick="resetAllConfigs()"><i class="fa-solid fa-rotate-right"></i> Reset</button>
+        </div>
+        
+        <div class="topology-wrapper">
+            <div class="topology-canvas" id="canvas-area">
+                <svg class="connections-svg" id="svg-connections"></svg>
+
+                <div class="device-node core-node" id="router-node" onclick="openModal('router-modal')">
+                    <div class="device-icon-box"><i class="fa-solid fa-server"></i><div class="status-badge" id="router-badge">!</div></div>
+                    <div class="device-label">Router Gateway<br><span class="device-ip" id="lbl-router-status">Subif: Unconfigured</span></div>
+                </div>
+
+                <div class="device-node core-node" id="core-node" onclick="openModal('core-modal')">
+                    <div class="device-icon-box"><i class="fa-solid fa-network-wired"></i><div class="status-badge" id="core-badge">!</div></div>
+                    <div class="device-label">Core Switch L3<br><span class="device-ip" id="lbl-core-status">Ports Default</span></div>
+                </div>
+
+                <div class="device-node" id="sw1-node" onclick="openModal('sw1-modal')">
+                    <div class="device-icon-box"><i class="fa-solid fa-network-wired"></i><div class="status-badge" id="sw1-badge">!</div></div>
+                    <div class="device-label">Switch Lantai 1<br><span class="device-ip" id="lbl-sw1-status">Ports Default</span></div>
+                </div>
+
+                <div class="device-node" id="sw2-node" onclick="openModal('sw2-modal')">
+                    <div class="device-icon-box"><i class="fa-solid fa-network-wired"></i><div class="status-badge" id="sw2-badge">!</div></div>
+                    <div class="device-label">Switch Lantai 2<br><span class="device-ip" id="lbl-sw2-status">Ports Default</span></div>
+                </div>
+
+                <div class="device-node" id="pc1-node" onclick="openPCModal('pc1')">
+                    <div class="device-icon-box"><i class="fa-solid fa-desktop"></i><div class="status-badge" id="pc1-badge">!</div></div>
+                    <div class="device-label">PC Guru L1<br><span class="device-ip" id="lbl-pc1-ip">No IP (VLAN 10)</span></div>
+                </div>
+                <div class="device-node" id="pc2-node" onclick="openPCModal('pc2')">
+                    <div class="device-icon-box"><i class="fa-solid fa-desktop"></i><div class="status-badge" id="pc2-badge">!</div></div>
+                    <div class="device-label">PC Lab 1<br><span class="device-ip" id="lbl-pc2-ip">No IP (VLAN 20)</span></div>
+                </div>
+
+                <div class="device-node" id="pc3-node" onclick="openPCModal('pc3')">
+                    <div class="device-icon-box"><i class="fa-solid fa-desktop"></i><div class="status-badge" id="pc3-badge">!</div></div>
+                    <div class="device-label">PC Guru L2<br><span class="device-ip" id="lbl-pc3-ip">No IP (VLAN 10)</span></div>
+                </div>
+                <div class="device-node" id="pc4-node" onclick="openPCModal('pc4')">
+                    <div class="device-icon-box"><i class="fa-solid fa-desktop"></i><div class="status-badge" id="pc4-badge">!</div></div>
+                    <div class="device-label">PC Lab 2<br><span class="device-ip" id="lbl-pc4-ip">No IP (VLAN 30)</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="lkpd-body">
+        <div class="card">
+            <div class="card-title">
+                <span><i class="fa-solid fa-list-check"></i> Petunjuk Uji Konfigurasi</span>
+            </div>
+            <div class="checklist-group">
+                <div class="checklist-item" id="chk-router">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-router"></i>
+                        <span>1. Sub-Interface Router (VLAN 10, 20, 30 GW)</span>
+                    </div>
+                    <span class="item-points">20 Poin</span>
+                </div>
+
+                <div class="checklist-item" id="chk-core">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-core"></i>
+                        <span>2. Trunking Core Switch (Port ke R1, SW1, SW2)</span>
+                    </div>
+                    <span class="item-points">20 Poin</span>
+                </div>
+
+                <div class="checklist-item" id="chk-sw1">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-sw1"></i>
+                        <span>3. VLAN Lantai 1 (Uplink: Trunk, PC: Access)</span>
+                    </div>
+                    <span class="item-points">15 Poin</span>
+                </div>
+
+                <div class="checklist-item" id="chk-sw2">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-sw2"></i>
+                        <span>4. VLAN Lantai 2 (Uplink: Trunk, PC: Access)</span>
+                    </div>
+                    <span class="item-points">15 Poin</span>
+                </div>
+
+                <div class="checklist-item" id="chk-pcs">
+                    <div class="item-info">
+                        <i class="fa-regular fa-circle-check" id="icon-pcs"></i>
+                        <span>5. DHCP Client tiap PC (Dapat IP dari Router) <b id="pc-progress">(0/4)</b></span>
+                    </div>
+                    <span class="item-points">30 Poin</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><span><i class="fa-solid fa-terminal"></i> Terminal Ping Test</span></div>
+            <div class="terminal-box" id="terminal-output">
+                <div>[SYSTEM] Menunggu Inter-VLAN Routing terhubung...</div>
+            </div>
+            <div class="ping-controls">
+                <select id="ping-source"></select>
+                <select id="ping-target"></select>
+                <button class="btn-cisco" onclick="runPingTest()">Kirim Ping</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="router-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-server"></i> Konfigurasi Sub-Interface (ROAS)</h3>
+            <button onclick="closeModal('router-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="badge-info">Target GW: 192.168.10.1 (VLAN10), 192.168.20.1 (VLAN20), 192.168.30.1 (VLAN30). DHCP Server diaktifkan otomatis.</div>
+            <div class="form-grid">
+                <label>IP Gateway VLAN 10 (Guru)</label>
+                <input type="text" id="cfg-r-vlan10" placeholder="0.0.0.0">
+            </div>
+            <div class="form-grid">
+                <label>IP Gateway VLAN 20 (Lab 1)</label>
+                <input type="text" id="cfg-r-vlan20" placeholder="0.0.0.0">
+            </div>
+            <div class="form-grid">
+                <label>IP Gateway VLAN 30 (Lab 2)</label>
+                <input type="text" id="cfg-r-vlan30" placeholder="0.0.0.0">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="saveRouterConfig()">Simpan & Terapkan</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="core-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-network-wired"></i> Core Switch L3</h3>
+            <button onclick="closeModal('core-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="badge-info">Konfigurasi jalur distribusi 802.1Q (Trunk) antar perangkat layer distribusi.</div>
+            <div class="form-grid">
+                <label>Port Gi0/1 (Menuju Router)</label>
+                <select id="cfg-core-pr">
+                    <option value="access">Access</option>
+                    <option value="trunk">Trunk (802.1Q)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Port Gi0/2 (Menuju Sw Lantai 1)</label>
+                <select id="cfg-core-p1">
+                    <option value="access">Access</option>
+                    <option value="trunk">Trunk (802.1Q)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Port Gi0/3 (Menuju Sw Lantai 2)</label>
+                <select id="cfg-core-p2">
+                    <option value="access">Access</option>
+                    <option value="trunk">Trunk (802.1Q)</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="saveCoreConfig()">Simpan</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="sw1-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-network-wired"></i> Switch Lantai 1</h3>
+            <button onclick="closeModal('sw1-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="badge-info">Atur VLAN ID sesuai peruntukan PC. Pastikan port uplink diset Trunk.</div>
+            <div class="form-grid">
+                <label>Port Fa0/1 (Uplink ke Core)</label>
+                <select id="cfg-sw1-up">
+                    <option value="access">Access Default</option>
+                    <option value="trunk">Trunk (802.1Q)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Port Fa0/2 (ke PC Guru L1 - Target VLAN 10)</label>
+                <select id="cfg-sw1-pc1">
+                    <option value="default">Access VLAN 1 (Default)</option>
+                    <option value="vlan10">Access VLAN 10 (Guru)</option>
+                    <option value="vlan20">Access VLAN 20 (Lab 1)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Port Fa0/3 (ke PC Lab 1 - Target VLAN 20)</label>
+                <select id="cfg-sw1-pc2">
+                    <option value="default">Access VLAN 1 (Default)</option>
+                    <option value="vlan10">Access VLAN 10 (Guru)</option>
+                    <option value="vlan20">Access VLAN 20 (Lab 1)</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="saveSw1Config()">Simpan</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="sw2-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-network-wired"></i> Switch Lantai 2</h3>
+            <button onclick="closeModal('sw2-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="badge-info">Atur VLAN ID untuk Lantai 2.</div>
+            <div class="form-grid">
+                <label>Port Fa0/1 (Uplink ke Core)</label>
+                <select id="cfg-sw2-up">
+                    <option value="access">Access Default</option>
+                    <option value="trunk">Trunk (802.1Q)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Port Fa0/2 (ke PC Guru L2 - Target VLAN 10)</label>
+                <select id="cfg-sw2-pc3">
+                    <option value="default">Access VLAN 1 (Default)</option>
+                    <option value="vlan10">Access VLAN 10 (Guru)</option>
+                    <option value="vlan30">Access VLAN 30 (Lab 2)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <label>Port Fa0/3 (ke PC Lab 2 - Target VLAN 30)</label>
+                <select id="cfg-sw2-pc4">
+                    <option value="default">Access VLAN 1 (Default)</option>
+                    <option value="vlan10">Access VLAN 10 (Guru)</option>
+                    <option value="vlan30">Access VLAN 30 (Lab 2)</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="saveSw2Config()">Simpan</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="pc-modal">
+    <div class="cisco-modal">
+        <div class="modal-header">
+            <h3 id="pc-modal-title"><i class="fa-solid fa-desktop"></i> Konfigurasi PC</h3>
+            <button onclick="closeModal('pc-modal')" style="background:none; border:none; color:white; cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="badge-info">Gunakan fitur DHCP untuk merequest IP secara otomatis dari Router, pastikan Trunk dan Access port sudah dikonfigurasi dengan benar agar Broadcast DHCP sampai ke Router.</div>
+            <input type="hidden" id="active-pc-id">
+            <div class="form-grid">
+                <label>Metode IP Configuration</label>
+                <select id="cfg-pc-mode">
+                    <option value="static">Static (Manual)</option>
+                    <option value="dhcp">DHCP (Auto Request)</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cisco" onclick="savePCConfig()">Request / Simpan</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // State Variables
+    let router = { v10: "", v20: "", v30: "" };
+    let coreSw = { pr: "access", p1: "access", p2: "access" };
+    let sw1 = { up: "access", pc1: "default", pc2: "default" };
+    let sw2 = { up: "access", pc3: "default", pc4: "default" };
+
+    let pcs = {
+        pc1: { name: "PC Guru L1", mode: "static", ip: "", targetVlan: 10, vlanCode: "vlan10", expectedIp: "192.168.10.11" },
+        pc2: { name: "PC Lab 1", mode: "static", ip: "", targetVlan: 20, vlanCode: "vlan20", expectedIp: "192.168.20.11" },
+        pc3: { name: "PC Guru L2", mode: "static", ip: "", targetVlan: 10, vlanCode: "vlan10", expectedIp: "192.168.10.12" },
+        pc4: { name: "PC Lab 2", mode: "static", ip: "", targetVlan: 30, vlanCode: "vlan30", expectedIp: "192.168.30.11" }
+    };
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // Topology Render
+    function drawLine(id1, id2, status) {
+        const el1 = document.getElementById(id1);
+        const el2 = document.getElementById(id2);
+        const cvs = document.getElementById('canvas-area').getBoundingClientRect();
+        const r1 = el1.getBoundingClientRect();
+        const r2 = el2.getBoundingClientRect();
+        
+        const x1 = r1.left - cvs.left + r1.width/2;
+        const y1 = r1.top - cvs.top + r1.height/2;
+        const x2 = r2.left - cvs.left + r2.width/2;
+        const y2 = r2.top - cvs.top + r2.height/2;
+
+        let cls = "wired-line";
+        if(status === 'trunk') cls = "wired-line trunk";
+        if(status === 'access-ok') cls = "wired-line active";
+        if(status === 'error') cls = "wired-line error";
+
+        return `<line class="${cls}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`;
+    }
+
+    function renderTopology() {
+        let svg = '';
+        
+        // Router to Core (Trunk check)
+        let rCoreStatus = (coreSw.pr === 'trunk') ? 'trunk' : 'wired-line';
+        svg += drawLine('router-node', 'core-node', rCoreStatus);
+
+        // Core to SW1
+        let cSw1Status = (coreSw.p1 === 'trunk' && sw1.up === 'trunk') ? 'trunk' : (coreSw.p1 !== sw1.up ? 'error' : 'wired-line');
+        svg += drawLine('core-node', 'sw1-node', cSw1Status);
+
+        // Core to SW2
+        let cSw2Status = (coreSw.p2 === 'trunk' && sw2.up === 'trunk') ? 'trunk' : (coreSw.p2 !== sw2.up ? 'error' : 'wired-line');
+        svg += drawLine('core-node', 'sw2-node', cSw2Status);
+
+        // Access SW1
+        svg += drawLine('sw1-node', 'pc1-node', (pcs.pc1.ip ? 'access-ok' : 'wired-line'));
+        svg += drawLine('sw1-node', 'pc2-node', (pcs.pc2.ip ? 'access-ok' : 'wired-line'));
+
+        // Access SW2
+        svg += drawLine('sw2-node', 'pc3-node', (pcs.pc3.ip ? 'access-ok' : 'wired-line'));
+        svg += drawLine('sw2-node', 'pc4-node', (pcs.pc4.ip ? 'access-ok' : 'wired-line'));
+
+        document.getElementById('svg-connections').innerHTML = svg;
+    }
+
+    window.addEventListener('resize', renderTopology);
+    setTimeout(() => { renderTopology(); evaluateTasks(); }, 300);
+
+    // Save Handlers
+    function saveRouterConfig() {
+        router.v10 = document.getElementById('cfg-r-vlan10').value.trim();
+        router.v20 = document.getElementById('cfg-r-vlan20').value.trim();
+        router.v30 = document.getElementById('cfg-r-vlan30').value.trim();
+        document.getElementById('lbl-router-status').innerText = (router.v10 || router.v20) ? "Subif Active" : "Unconfigured";
+        logTerminal(`[ROUTER] Configured Gateways - V10: ${router.v10}, V20: ${router.v20}, V30: ${router.v30}`, "terminal-warn");
+        closeModal('router-modal'); evaluateTasks();
+    }
+
+    function saveCoreConfig() {
+        coreSw.pr = document.getElementById('cfg-core-pr').value;
+        coreSw.p1 = document.getElementById('cfg-core-p1').value;
+        coreSw.p2 = document.getElementById('cfg-core-p2').value;
+        document.getElementById('lbl-core-status').innerText = (coreSw.pr === 'trunk' ? "Trunking On" : "Ports Default");
+        logTerminal(`[CORE SWITCH] Ports updated.`, "terminal-warn");
+        closeModal('core-modal'); evaluateTasks();
+    }
+
+    function saveSw1Config() {
+        sw1.up = document.getElementById('cfg-sw1-up').value;
+        sw1.pc1 = document.getElementById('cfg-sw1-pc1').value;
+        sw1.pc2 = document.getElementById('cfg-sw1-pc2').value;
+        document.getElementById('lbl-sw1-status').innerText = "VLAN Assigned";
+        logTerminal(`[SWITCH 1] Configuration applied.`, "terminal-warn");
+        closeModal('sw1-modal'); evaluateTasks();
+    }
+
+    function saveSw2Config() {
+        sw2.up = document.getElementById('cfg-sw2-up').value;
+        sw2.pc3 = document.getElementById('cfg-sw2-pc3').value;
+        sw2.pc4 = document.getElementById('cfg-sw2-pc4').value;
+        document.getElementById('lbl-sw2-status').innerText = "VLAN Assigned";
+        logTerminal(`[SWITCH 2] Configuration applied.`, "terminal-warn");
+        closeModal('sw2-modal'); evaluateTasks();
+    }
+
+    function openPCModal(id) {
+        document.getElementById('active-pc-id').value = id;
+        document.getElementById('pc-modal-title').innerHTML = `<i class="fa-solid fa-desktop"></i> Konfigurasi ${pcs[id].name}`;
+        document.getElementById('cfg-pc-mode').value = pcs[id].mode;
+        openModal('pc-modal');
+    }
+
+    function checkRoutingPath(pcId) {
+        let isRouterReady = (router.v10 === "192.168.10.1" && router.v20 === "192.168.20.1" && router.v30 === "192.168.30.1");
+        let coreReady = (coreSw.pr === 'trunk');
+        
+        if (!isRouterReady || !coreReady) return false;
+
+        if (pcId === 'pc1' || pcId === 'pc2') {
+            if (coreSw.p1 !== 'trunk' || sw1.up !== 'trunk') return false;
+            if (pcId === 'pc1' && sw1.pc1 === pcs.pc1.vlanCode) return true;
+            if (pcId === 'pc2' && sw1.pc2 === pcs.pc2.vlanCode) return true;
+        }
+        
+        if (pcId === 'pc3' || pcId === 'pc4') {
+            if (coreSw.p2 !== 'trunk' || sw2.up !== 'trunk') return false;
+            if (pcId === 'pc3' && sw2.pc3 === pcs.pc3.vlanCode) return true;
+            if (pcId === 'pc4' && sw2.pc4 === pcs.pc4.vlanCode) return true;
+        }
+        return false;
+    }
+
+    function savePCConfig() {
+        let id = document.getElementById('active-pc-id').value;
+        let mode = document.getElementById('cfg-pc-mode').value;
+        pcs[id].mode = mode;
+
+        logTerminal(`[${pcs[id].name}] Requesting IP via ${mode.toUpperCase()}...`);
+
+        if (mode === 'dhcp') {
+            let pathOk = checkRoutingPath(id);
+            if (pathOk) {
+                pcs[id].ip = pcs[id].expectedIp;
+                logTerminal(`[DHCP SUCCESS] ${pcs[id].name} mendapatkan IP: ${pcs[id].ip}`, "terminal-success");
+            } else {
+                pcs[id].ip = "";
+                logTerminal(`[DHCP FAILED] DHCP Discover terputus. Cek VLAN/Trunk/Gateway.`, "terminal-fail");
+            }
+        } else {
+            pcs[id].ip = ""; // Simplifikasi: static diset kosong jika tes hanya via DHCP
+        }
+
+        document.getElementById(`lbl-${id}-ip`).innerText = pcs[id].ip ? pcs[id].ip : `No IP (VLAN ${pcs[id].targetVlan})`;
+        closeModal('pc-modal'); evaluateTasks();
+    }
+
+    function evaluateTasks() {
+        let totalScore = 0;
+
+        // Task 1: Router
+        let isRouterOk = (router.v10 === "192.168.10.1" && router.v20 === "192.168.20.1" && router.v30 === "192.168.30.1");
+        updateChecklistState('router', isRouterOk);
+        updateNodeState('router-node', 'router-badge', isRouterOk);
+        if(isRouterOk) totalScore += 20;
+
+        // Task 2: Core
+        let isCoreOk = (coreSw.pr === 'trunk' && coreSw.p1 === 'trunk' && coreSw.p2 === 'trunk');
+        updateChecklistState('core', isCoreOk);
+        updateNodeState('core-node', 'core-badge', isCoreOk);
+        if(isCoreOk) totalScore += 20;
+
+        // Task 3: SW1
+        let isSw1Ok = (sw1.up === 'trunk' && sw1.pc1 === 'vlan10' && sw1.pc2 === 'vlan20');
+        updateChecklistState('sw1', isSw1Ok);
+        updateNodeState('sw1-node', 'sw1-badge', isSw1Ok);
+        if(isSw1Ok) totalScore += 15;
+
+        // Task 4: SW2
+        let isSw2Ok = (sw2.up === 'trunk' && sw2.pc3 === 'vlan10' && sw2.pc4 === 'vlan30');
+        updateChecklistState('sw2', isSw2Ok);
+        updateNodeState('sw2-node', 'sw2-badge', isSw2Ok);
+        if(isSw2Ok) totalScore += 15;
+
+        // Task 5: PCs DHCP
+        let pcSuccessCount = 0;
+        for(let i=1; i<=4; i++) {
+            let p = pcs[`pc${i}`];
+            let isPcOk = (p.ip === p.expectedIp);
+            updateNodeState(`pc${i}-node`, `pc${i}-badge`, isPcOk);
+            if(isPcOk) pcSuccessCount++;
+        }
+        document.getElementById('pc-progress').innerText = `(${pcSuccessCount}/4)`;
+        updateChecklistState('pcs', pcSuccessCount === 4);
+        totalScore += (pcSuccessCount * 7.5);
+
+        document.getElementById('total-score').innerText = `${Math.floor(totalScore)} / 100`;
+
+        renderTopology();
+        updatePingTargets();
+    }
+
+    function updateChecklistState(key, isDone) {
+        let item = document.getElementById(`chk-${key}`);
+        let icon = document.getElementById(`icon-${key}`);
+        if(isDone) {
+            item.classList.add('completed');
+            icon.className = "fa-solid fa-circle-check";
+        } else {
+            item.classList.remove('completed');
+            icon.className = "fa-regular fa-circle-check";
+        }
+    }
+
+    function updateNodeState(nodeId, badgeId, isOk) {
+        let node = document.getElementById(nodeId);
+        let badge = document.getElementById(badgeId);
+        if(isOk) {
+            node.classList.add('configured');
+            badge.className = "status-badge online";
+            badge.innerHTML = '<i class="fa-solid fa-check"></i>';
+        } else {
+            node.classList.remove('configured');
+            badge.className = "status-badge";
+            badge.innerHTML = '!';
+        }
+    }
+
+    function updatePingTargets() {
+        const srcSel = document.getElementById('ping-source');
+        const dstSel = document.getElementById('ping-target');
+        
+        let optionsHtml = '';
+        for(let i=1; i<=4; i++) {
+            if(pcs[`pc${i}`].ip) {
+                optionsHtml += `<option value="pc${i}">${pcs[`pc${i}`].name} (${pcs[`pc${i}`].ip})</option>`;
+            }
+        }
+        if(!optionsHtml) optionsHtml = `<option value="">-- Tidak ada PC yang memiliki IP --</option>`;
+
+        let curSrc = srcSel.value;
+        let curDst = dstSel.value;
+        srcSel.innerHTML = optionsHtml;
+        dstSel.innerHTML = optionsHtml;
+        if(curSrc) srcSel.value = curSrc;
+        if(curDst) dstSel.value = curDst;
+    }
+
+    function runPingTest() {
+        let srcKey = document.getElementById('ping-source').value;
+        let dstKey = document.getElementById('ping-target').value;
+
+        if(!srcKey || !dstKey) {
+            logTerminal(`[ERROR] Pilih PC pengirim dan penerima yang memiliki IP!`, "terminal-fail");
+            return;
+        }
+
+        let srcObj = pcs[srcKey];
+        let dstObj = pcs[dstKey];
+
+        logTerminal(`\n> PING dari ${srcObj.name} ke ${dstObj.expectedIp}:`);
+
+        // Karena IP hanya didapat jika routing & trunk OK (berdasarkan logika checkRoutingPath), 
+        // maka jika kedua belah pihak memiliki IP yang valid, ping pasti berhasil.
+        if (srcObj.ip && dstObj.ip) {
+            setTimeout(() => { logTerminal(`Reply from ${dstObj.ip}: bytes=32 time=2ms TTL=63`, "terminal-success"); }, 300);
+            setTimeout(() => { logTerminal(`Reply from ${dstObj.ip}: bytes=32 time=1ms TTL=63`, "terminal-success"); }, 600);
+            setTimeout(() => { logTerminal(`Ping statistics: Sent = 2, Received = 2, Lost = 0 (0% loss).`, "terminal-success"); }, 900);
+        } else {
+            logTerminal(`Request timed out. [Destination Host Unreachable]`, "terminal-fail");
+        }
+    }
+
+    function resetAllConfigs() {
+        router = { v10: "", v20: "", v30: "" };
+        coreSw = { pr: "access", p1: "access", p2: "access" };
+        sw1 = { up: "access", pc1: "default", pc2: "default" };
+        sw2 = { up: "access", pc3: "default", pc4: "default" };
+
+        for(let i=1; i<=4; i++) {
+            pcs[`pc${i}`].ip = "";
+            pcs[`pc${i}`].mode = "static";
+            document.getElementById(`lbl-pc${i}-ip`).innerText = `No IP (VLAN ${pcs[`pc${i}`].targetVlan})`;
+        }
+
+        document.getElementById('lbl-router-status').innerText = "Subif: Unconfigured";
+        document.getElementById('lbl-core-status').innerText = "Ports Default";
+        document.getElementById('lbl-sw1-status').innerText = "Ports Default";
+        document.getElementById('lbl-sw2-status').innerText = "Ports Default";
+        
+        // reset form values
+        document.getElementById('cfg-r-vlan10').value = "";
+        document.getElementById('cfg-r-vlan20').value = "";
+        document.getElementById('cfg-r-vlan30').value = "";
+        
+        ["cfg-core-pr", "cfg-core-p1", "cfg-core-p2", "cfg-sw1-up", "cfg-sw2-up"].forEach(id => document.getElementById(id).value = "access");
+        ["cfg-sw1-pc1", "cfg-sw1-pc2", "cfg-sw2-pc3", "cfg-sw2-pc4"].forEach(id => document.getElementById(id).value = "default");
+
+        logTerminal(`[SYSTEM] Simulasi direset. Semua status dikembalikan ke Default (Mati).`, "terminal-warn");
+        evaluateTasks();
+    }
+
+    function logTerminal(msg, cls="") {
+        let box = document.getElementById('terminal-output');
+        box.innerHTML += `<div class="${cls}">${msg}</div>`;
+        box.scrollTop = box.scrollHeight;
+    }
+</script>
+</body>
+</html>
